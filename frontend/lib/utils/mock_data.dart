@@ -1,4 +1,3 @@
-import '../models/call_entry.dart';
 import '../models/chat.dart';
 import '../models/status_update.dart';
 
@@ -166,44 +165,5 @@ List<StatusUpdate> statusUpdates = [
         caption: 'Weekend déconnexion 🌿',
       ),
     ],
-  ),
-];
-
-List<CallEntry> calls = [
-  CallEntry(
-    id: 'c1',
-    contact: 'Lara Martins',
-    time: _now.subtract(const Duration(minutes: 20)),
-    direction: CallDirection.incoming,
-    isVideo: false,
-    missed: false,
-    avatarUrl: null,
-  ),
-  CallEntry(
-    id: 'c2',
-    contact: 'Studio Flutter',
-    time: _now.subtract(const Duration(hours: 2, minutes: 14)),
-    direction: CallDirection.outgoing,
-    isVideo: true,
-    missed: false,
-    avatarUrl: null,
-  ),
-  CallEntry(
-    id: 'c3',
-    contact: 'Sofia',
-    time: _now.subtract(const Duration(hours: 8)),
-    direction: CallDirection.incoming,
-    isVideo: false,
-    missed: true,
-    avatarUrl: null,
-  ),
-  CallEntry(
-    id: 'c4',
-    contact: 'Victor Hugo',
-    time: _now.subtract(const Duration(days: 1, hours: 1)),
-    direction: CallDirection.outgoing,
-    isVideo: false,
-    missed: false,
-    avatarUrl: null,
   ),
 ];

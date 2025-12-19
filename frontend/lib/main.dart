@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'pages/home_page.dart';
+import 'pages/auth_page.dart';
 import 'utils/app_colors.dart';
 
 void main() {
@@ -29,7 +29,7 @@ class WhatsappApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const HomePage(),
+      home: const AuthPage(),
     );
   }
 }

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import '../utils/app_colors.dart';
-import 'calls_page.dart';
 import 'chats_page.dart';
 import 'settings_page.dart';
 import 'status_page.dart';
@@ -17,7 +15,6 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = const [
     ChatsPage(),
     StatusPage(),
-    CallsPage(),
     SettingsPage(),
   ];
   int _currentIndex = 0;
@@ -28,15 +25,23 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text(_titleForIndex(_currentIndex)),
         actions: [
-          if (_currentIndex != 3) IconButton(onPressed: () {}, icon: const Icon(Icons.photo_camera_outlined)),
+          if (_currentIndex != 2) IconButton(onPressed: () {}, icon: const Icon(Icons.photo_camera_outlined)),
           IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
           IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Column(
+        children: [
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _pages,
+            ),
+          ),
+          
+        ],
       ),
+      
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: AppColors.primary,
@@ -45,7 +50,6 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Discussions'),
           BottomNavigationBarItem(icon: Icon(Icons.timelapse_outlined), label: 'Statuts'),
-          BottomNavigationBarItem(icon: Icon(Icons.call_outlined), label: 'Appels'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Réglages'),
         ],
       ),
@@ -60,8 +64,6 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return 'Statuts';
       case 2:
-        return 'Appels';
-      case 3:
         return 'Réglages';
       default:
         return 'WhatsApp';
@@ -76,9 +78,6 @@ class _HomePageState extends State<HomePage> {
         break;
       case 1:
         icon = Icons.photo_camera_outlined;
-        break;
-      case 2:
-        icon = Icons.add_ic_call;
         break;
       default:
         icon = null;
