@@ -32,7 +32,8 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
-
+    networks:
+      - whatsapp_net
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
