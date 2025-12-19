@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:whatsapp/api/api_service.dart';
 
 import '../utils/app_colors.dart';
 import 'home_page.dart';
@@ -112,9 +115,9 @@ class _AuthPageState extends State<AuthPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildField(
-            controller: _signupPhoneController,
+            controller: _loginPhoneController,
             label: 'Téléphone',
-            keyboardType: TextInputType.emailAddress,
+            keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 16),
           _buildField(
@@ -124,7 +127,13 @@ class _AuthPageState extends State<AuthPage> {
           ),
           const Spacer(),
           ElevatedButton(
-            onPressed: _handleAuthSuccess,
+            onPressed: () async {
+              final response = await ApiService().login(
+                password: _loginPasswordController.text.trim(),
+                phone: _loginPhoneController.text.trim(),
+              );
+              log("Response: $response");
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -175,7 +184,15 @@ class _AuthPageState extends State<AuthPage> {
           ),
           const Spacer(),
           ElevatedButton(
-            onPressed: _handleAuthSuccess,
+            onPressed: () async {
+              final response = await ApiService().register(
+                lastName: _signupNameController.text.trim(),
+                firstName: _signupFirstNameController.text.trim(),
+                phone: _signupPhoneController.text.trim(),
+                password: _signupPasswordController.text.trim(),
+              );
+              log("Response: $response");
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

@@ -25,14 +25,32 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> login({
-    required String email,
+    required String phone,
     required String password,
   }) {
     return _request(
       'POST',
-      '/auth/login',
+      '/api/login',
       body: {
-        'email': email,
+        'phone': phone,
+        'password': password,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> register({
+    required String firstName,
+    required String lastName,
+    required String phone,
+    required String password,
+  }) {
+    return _request(
+      'POST',
+      '/api/register',
+      body: {
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone': phone,
         'password': password,
       },
     );
