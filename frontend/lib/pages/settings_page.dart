@@ -14,7 +14,7 @@ class SettingsPage extends StatelessWidget {
     return ListView(
       children: [
         Container(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [

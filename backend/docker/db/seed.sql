@@ -1,4 +1,4 @@
--- phpMyAdmin SQL Dump
+﻿-- phpMyAdmin SQL Dump
 -- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
@@ -31,7 +31,9 @@ CREATE TABLE `messages` (
   `id` bigint UNSIGNED NOT NULL,
   `sender_id` bigint UNSIGNED NOT NULL,
   `receiver_id` bigint UNSIGNED NOT NULL,
-  `content` varchar(200) NOT NULL,
+  `content` varchar(200) DEFAULT NULL,
+  `type` enum('text','image') NOT NULL DEFAULT 'text',
+  `media_url` varchar(255) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -39,15 +41,15 @@ CREATE TABLE `messages` (
 -- Déchargement des données de la table `messages`
 --
 
-INSERT INTO `messages` (`id`, `sender_id`, `receiver_id`, `content`, `created_at`) VALUES
-(1, 1, 2, 'Salut Bob', '2025-12-19 17:29:29'),
-(2, 2, 1, 'Salut Alice', '2025-12-19 17:29:29'),
-(3, 1, 2, 'Ça va ?', '2025-12-19 17:29:29'),
-(4, 2, 1, 'Oui tranquille', '2025-12-19 17:29:29'),
-(5, 1, 3, 'Hey Charlie', '2025-12-19 17:29:35'),
-(6, 3, 1, 'Yo', '2025-12-19 17:29:35'),
-(7, 1, 3, 'Tu bosses sur quoi ?', '2025-12-19 17:29:35'),
-(8, 1, 2, 'Nouveau message test', '2025-12-19 17:36:05');
+INSERT INTO `messages` (`id`, `sender_id`, `receiver_id`, `content`, `type`, `media_url`, `created_at`) VALUES
+(1, 1, 2, 'Salut Bob', 'text', NULL, '2025-12-19 17:29:29'),
+(2, 2, 1, 'Salut Alice', 'text', NULL, '2025-12-19 17:29:29'),
+(3, 1, 2, 'Ça va ?', 'text', NULL, '2025-12-19 17:29:29'),
+(4, 2, 1, 'Oui tranquille', 'text', NULL, '2025-12-19 17:29:29'),
+(5, 1, 3, 'Hey Charlie', 'text', NULL, '2025-12-19 17:29:35'),
+(6, 3, 1, 'Yo', 'text', NULL, '2025-12-19 17:29:35'),
+(7, 1, 3, 'Tu bosses sur quoi ?', 'text', NULL, '2025-12-19 17:29:35'),
+(8, 1, 2, 'Nouveau message test', 'text', NULL, '2025-12-19 17:36:05');
 
 -- --------------------------------------------------------
 
@@ -71,7 +73,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `first_name`, `last_name`, `phone`, `password`, `last_seen`, `created_at`, `updated_at`) VALUES
-(1, 'Alice', 'Dupont', '0611111111', '$2y$10$dQ4RvSYNPIAwXE5VTLuOdesazLyc6LX.1HoVCpBREB63UMlAKeEEq', '2025-12-19 17:33:43', '2025-12-19 17:28:13', '2025-12-19 17:33:43'),
+(1, 'Alice', 'Dupont', '0611111111', '$2y$10$dQ4RvSYNPIAwXE5VTLuOdesazLyc6LX.1HoVCpBREB63UMlAKeEEq', NULL, '2025-12-19 17:28:13', '2025-12-19 17:33:43'),
 (2, 'Bob', 'Martin', '0611111112', '$2y$10$85ob2lOlou.eMQeKz9mNbO6cQFDOmCQ61vRbqmj.M4a3ShdFWwgV.', NULL, '2025-12-19 17:28:23', NULL),
 (3, 'Charlie', 'Durand', '0611111113', '$2y$10$PqB0lYl08FU4HR/9T6MX4eg/B7ksZcZjspW35D2Mg1R4hcqP0JXLS', NULL, '2025-12-19 17:28:28', NULL);
 
@@ -126,3 +128,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+

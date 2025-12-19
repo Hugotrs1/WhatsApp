@@ -1,2 +1,5 @@
 .env
 frontend/pubspec.lock
+frontend/android/settings.gradle.kts
+frontend/android/gradle/wrapper/gradle-wrapper.properties
+frontend/android/settings.gradle.kts

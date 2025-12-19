@@ -40,6 +40,7 @@ class _AddContactPageState extends State<AddContactPage> {
         const SizedBox(height: 24),
         Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: Column(
             children: [
               TextFormField(
@@ -59,7 +60,7 @@ class _AddContactPageState extends State<AddContactPage> {
                   label: 'Telephone',
                   prefixIcon: const Icon(Icons.phone_outlined),
                 ),
-                validator: (value) => _requiredValidator(value, 'Telephone'),
+                validator: _phoneValidator,
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -79,7 +80,10 @@ class _AddContactPageState extends State<AddContactPage> {
 
   void _submit() {
     final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
+    if (!isValid) {
+      _showSnackBar('Merci de renseigner tous les champs.');
+      return;
+    }
     _formKey.currentState?.reset();
     _nameController.clear();
     _phoneController.clear();
@@ -93,5 +97,26 @@ class _AddContactPageState extends State<AddContactPage> {
       return 'Merci de renseigner $label.';
     }
     return null;
+  }
+
+  String? _phoneValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return 'Merci de renseigner Telephone.';
+    }
+    final normalized = trimmed.replaceAll(RegExp(r'[\s()-]'), '');
+    if (!RegExp(r'^\+?\d+$').hasMatch(normalized)) {
+      return 'Numero invalide.';
+    }
+    if (normalized.replaceFirst('+', '').length < 6) {
+      return 'Numero trop court.';
+    }
+    return null;
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }

@@ -109,6 +109,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   Future<void> _handleLogout() async {
     await ApiService().clearToken();
+    await ApiService().clearRememberedCredentials();
+    await ApiService().clearConnectionStatus();
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }

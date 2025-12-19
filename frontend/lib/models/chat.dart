@@ -1,4 +1,5 @@
 enum MessageStatus { sent, delivered, read }
+enum MessageType { text, image }
 
 class ChatMessage {
   const ChatMessage({
@@ -8,6 +9,8 @@ class ChatMessage {
     required this.time,
     this.isMine = false,
     this.status = MessageStatus.sent,
+    this.type = MessageType.text,
+    this.mediaUrl,
     this.isVoice = false,
     this.isForwarded = false,
   });
@@ -18,6 +21,8 @@ class ChatMessage {
   final DateTime time;
   final bool isMine;
   final MessageStatus status;
+  final MessageType type;
+  final String? mediaUrl;
   final bool isVoice;
   final bool isForwarded;
 }

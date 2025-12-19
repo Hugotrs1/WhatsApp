@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 
-import '../utils/app_colors.dart';
+import 'app_theme.dart';
 
 class WhatsAppStyles {
   WhatsAppStyles._();
 
-  static const Color primaryColor = AppColors.primary;
-  static const Color backgroundColor = AppColors.background;
+  static const Color primaryColor = AppTheme.brandMid;
+  static const Color backgroundColor = AppTheme.brandLight;
 
-  static final Color mutedTextColor = Colors.grey.shade700;
-  static final Color dividerColor = Colors.grey.shade300;
-  static final Color searchFillColor = Colors.grey.shade100;
+  static const Color mutedTextColor = AppTheme.muted;
+  static const Color dividerColor = AppTheme.divider;
+  static const Color searchFillColor = AppTheme.searchFill;
 
   static const EdgeInsets pagePadding = EdgeInsets.all(20);
   static const EdgeInsets authFormPadding = EdgeInsets.all(20);
   static const EdgeInsets authFormCompactPadding = EdgeInsets.all(10);
 
-  static const BorderRadius fieldBorderRadius = BorderRadius.all(Radius.circular(14));
-  static const BorderRadius cardBorderRadius = BorderRadius.all(Radius.circular(20));
-  static const BorderRadius searchBorderRadius = BorderRadius.all(Radius.circular(16));
-  static const BorderRadius composerBorderRadius = BorderRadius.all(Radius.circular(24));
+  static const BorderRadius fieldBorderRadius = AppTheme.fieldBorderRadius;
+  static const BorderRadius cardBorderRadius = AppTheme.cardBorderRadius;
+  static const BorderRadius searchBorderRadius = AppTheme.searchBorderRadius;
+  static const BorderRadius composerBorderRadius = AppTheme.composerBorderRadius;
 
   static OutlineInputBorder outlineBorder(Color color) {
     return OutlineInputBorder(
@@ -41,7 +41,7 @@ class WhatsAppStyles {
   );
 
   static final ButtonStyle primaryButtonStyle = ElevatedButton.styleFrom(
-    backgroundColor: Colors.blue,
+    backgroundColor: AppTheme.accent,
     foregroundColor: Colors.white,
     padding: const EdgeInsets.symmetric(vertical: 14),
     shape: const RoundedRectangleBorder(borderRadius: fieldBorderRadius),
@@ -57,7 +57,7 @@ class WhatsAppStyles {
       hintText: hint,
       prefixIcon: prefixIcon,
       border: outlineBorder(dividerColor),
-      focusedBorder: outlineBorder(AppColors.primary),
+      focusedBorder: outlineBorder(AppTheme.accent),
     );
   }
 
@@ -71,7 +71,7 @@ class WhatsAppStyles {
       hintText: hint,
       prefixIcon: prefixIcon,
       border: outlineBorder(dividerColor),
-      focusedBorder: outlineBorder(AppColors.primary),
+      focusedBorder: outlineBorder(AppTheme.accent),
     );
   }
 
@@ -103,7 +103,7 @@ class WhatsAppStyles {
   static TextStyle? brandTitleStyle(BuildContext context) {
     return Theme.of(context).textTheme.headlineLarge?.copyWith(
           fontWeight: FontWeight.w700,
-          color: AppColors.primary,
+          color: AppTheme.brandMid,
         );
   }
 

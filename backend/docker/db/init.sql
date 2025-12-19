@@ -13,7 +13,9 @@ CREATE TABLE messages (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     sender_id BIGINT UNSIGNED NOT NULL,
     receiver_id BIGINT UNSIGNED NOT NULL,
-    content VARCHAR(200) NOT NULL,
+    content VARCHAR(200) NULL,
+    type ENUM('text', 'image') NOT NULL DEFAULT 'text',
+    media_url VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     INDEX idx_conversation (sender_id, receiver_id),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'pages/auth_page.dart';
-import 'utils/app_colors.dart';
+import 'styles/app_theme.dart';
 
 void main() {
   runApp(const WhatsappApp());
@@ -15,20 +15,7 @@ class WhatsappApp extends StatelessWidget {
     return MaterialApp(
       title: 'WhatsApp clone',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-        scaffoldBackgroundColor: AppColors.background,
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-        ),
-      ),
+      theme: AppTheme.lightTheme(),
       home: const AuthPage(),
     );
   }
