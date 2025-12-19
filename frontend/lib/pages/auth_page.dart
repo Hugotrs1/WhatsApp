@@ -279,15 +279,12 @@ class _AuthPageState extends State<AuthPage> {
     if (error is Map) {
       final details = error['details'];
       if (details is Map && details['error'] is String) {
-        log("Error message: ${error['details']}");
         return details['error'] as String;
       }
       if (error['message'] is String) {
-        log("Error message: ${error['message']}");
         return error['message'] as String;
       }
     }
-    log(  "Error message: unknown error $response");
     return 'Connexion impossible.';
   }
 
