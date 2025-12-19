@@ -31,9 +31,8 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./docker/db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - whatsapp_net
+      - ./docker/db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
