@@ -70,5 +70,48 @@ if ($uri === '/api/register' && $method === 'POST') {
     exit;
 }
 
+if ($uri === '/api/login' && $method === 'POST') {
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    if (empty($data['phone']) || empty($data['password'])) {
+        http_response_code(422);
+        echo json_encode(['error' => 'Invalid payload']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT id, password FROM users WHERE phone = ?'
+    );
+    $stmt->execute([$data['phone']]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user || !password_verify($data['password'], $user['password'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid credentials']);
+        exit;
+    }
+
+    require __DIR__ . '/../src/Auth/Jwt.php';
+
+    $token = jwt_encode(
+        [
+            'sub' => $user['id'],
+            'iat' => time(),
+            'exp' => time() + 3600
+        ],
+        getenv('JWT_SECRET')
+    );
+
+    $pdo->prepare(
+        'UPDATE users SET last_seen = NOW() WHERE id = ?'
+    )->execute([$user['id']]);
+
+    echo json_encode([
+        'token' => $token
+    ]);
+    exit;
+}
+
+
 http_response_code(404);
 echo json_encode(['error' => 'Not found']);
