@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:whatsapp/api/api_service.dart';
 
-import '../utils/app_colors.dart';
+import '../styles/whatsapp_style.dart';
 import 'home_page.dart';
 
 class AuthPage extends StatefulWidget {
@@ -21,6 +21,7 @@ class _AuthPageState extends State<AuthPage> {
   final _signupPhoneController = TextEditingController();
   final _signupPasswordController = TextEditingController();
   final _signupConfirmController = TextEditingController();
+  final _signupFormKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
@@ -41,7 +42,7 @@ class _AuthPageState extends State<AuthPage> {
       child: Scaffold(
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: WhatsAppStyles.pagePadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -49,39 +50,24 @@ class _AuthPageState extends State<AuthPage> {
                 Text(
                   'WhatsApp',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
+                  style: WhatsAppStyles.brandTitleStyle(context),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Connecte-toi pour discuter en toute simplicité.',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade700,
-                      ),
+                  style: WhatsAppStyles.mutedBodyStyle(context),
                 ),
                 const SizedBox(height: 24),
                 Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
+                  decoration: WhatsAppStyles.cardDecoration,
                   child: Column(
                     children: [
                       const SizedBox(height: 12),
                       TabBar(
-                        labelColor: AppColors.primary,
+                        labelColor: WhatsAppStyles.primaryColor,
                         unselectedLabelColor: Colors.grey.shade600,
-                        indicatorColor: AppColors.primary,
+                        indicatorColor: WhatsAppStyles.primaryColor,
                         tabs: const [
                           Tab(text: 'Connexion'),
                           Tab(text: 'Inscription'),
@@ -110,7 +96,7 @@ class _AuthPageState extends State<AuthPage> {
 
   Widget _buildLoginForm(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: WhatsAppStyles.authFormPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -128,18 +114,30 @@ class _AuthPageState extends State<AuthPage> {
           const Spacer(),
           ElevatedButton(
             onPressed: () async {
-              final response = await ApiService().login(
-                password: _loginPasswordController.text.trim(),
-                phone: _loginPhoneController.text.trim(),
-              );
-              log("Response: $response");
+              try {
+                final response = await ApiService().login(
+                  password: _loginPasswordController.text.trim(),
+                  phone: _loginPhoneController.text.trim(),
+                );
+                final token = _readToken(response);
+                if (token != null) {
+                  await ApiService().saveToken(token);
+                }
+                log("Response: $response");
+                if (!mounted) return;
+                if (response['ok'] == true && token != null) {
+                  _handleAuthSuccess();
+                } else {
+                  final message = _readErrorMessage(response);
+                  log('Connexion impossible: $message');
+                  _showErrorDialog(message);
+                }
+              } catch (error) {
+                if (!mounted) return;
+                _showErrorDialog(error.toString());
+              }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
+            style: WhatsAppStyles.primaryButtonStyle,
             child: const Text('Se connecter'),
           ),
         ],
@@ -149,59 +147,64 @@ class _AuthPageState extends State<AuthPage> {
 
   Widget _buildSignupForm(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildField(
-            controller: _signupNameController,
-            label: 'Nom',
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 16),
-          _buildField(
-            controller: _signupFirstNameController,
-            label: 'Prénom',
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 16),
-          _buildField(
-            controller: _signupPhoneController,
-            label: 'Téléphone',
-            textCapitalization: TextCapitalization.words,
-          ),
-          const SizedBox(height: 16),
-          _buildField(
-            controller: _signupPasswordController,
-            label: 'Mot de passe',
-            obscureText: true,
-          ),
-          const SizedBox(height: 16),
-          _buildField(
-            controller: _signupConfirmController,
-            label: 'Confirmer le mot de passe',
-            obscureText: true,
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: () async {
-              final response = await ApiService().register(
-                lastName: _signupNameController.text.trim(),
-                firstName: _signupFirstNameController.text.trim(),
-                phone: _signupPhoneController.text.trim(),
-                password: _signupPasswordController.text.trim(),
-              );
-              log("Response: $response");
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      padding: WhatsAppStyles.authFormCompactPadding,
+      child: Form(
+        key: _signupFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildFormField(
+              controller: _signupNameController,
+              label: 'Nom',
+              textCapitalization: TextCapitalization.words,
+              validator: (value) => _requiredValidator(value, 'Nom'),
             ),
-            child: const Text('Creer un compte'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            _buildFormField(
+              controller: _signupFirstNameController,
+              label: 'Prenom',
+              textCapitalization: TextCapitalization.words,
+              validator: (value) => _requiredValidator(value, 'Prenom'),
+            ),
+            const SizedBox(height: 16),
+            _buildFormField(
+              controller: _signupPhoneController,
+              label: 'Telephone',
+              keyboardType: TextInputType.phone,
+              validator: (value) => _requiredValidator(value, 'Telephone'),
+            ),
+            const SizedBox(height: 16),
+            _buildFormField(
+              controller: _signupPasswordController,
+              label: 'Mot de passe',
+              obscureText: true,
+              validator: (value) => _requiredValidator(value, 'Mot de passe'),
+            ),
+            const SizedBox(height: 16),
+            _buildFormField(
+              controller: _signupConfirmController,
+              label: 'Confirmer le mot de passe',
+              obscureText: true,
+              validator: _confirmPasswordValidator,
+            ),
+            const Spacer(),
+            ElevatedButton(
+              onPressed: () async {
+                final isValid = _signupFormKey.currentState?.validate() ?? false;
+                if (!isValid) return;
+                final response = await ApiService().register(
+                  lastName: _signupNameController.text.trim(),
+                  firstName: _signupFirstNameController.text.trim(),
+                  phone: _signupPhoneController.text.trim(),
+                  password: _signupPasswordController.text.trim(),
+                );
+                log("Response: $response");
+              },
+              style: WhatsAppStyles.primaryButtonStyle,
+              child: const Text('Creer un compte'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -218,20 +221,95 @@ class _AuthPageState extends State<AuthPage> {
       keyboardType: keyboardType,
       obscureText: obscureText,
       textCapitalization: textCapitalization,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary),
-        ),
-      ),
+      decoration: WhatsAppStyles.formFieldDecoration(label: label),
     );
+  }
+
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType? keyboardType,
+    bool obscureText = false,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      textCapitalization: textCapitalization,
+      validator: validator,
+      decoration: WhatsAppStyles.formFieldDecoration(label: label),
+    );
+  }
+
+  String? _requiredValidator(String? value, String fieldLabel) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Merci de renseigner $fieldLabel.';
+    }
+    return null;
+  }
+
+  String? _confirmPasswordValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Merci de confirmer le mot de passe.';
+    }
+    if (value.trim() != _signupPasswordController.text.trim()) {
+      return 'Les mots de passe ne correspondent pas.';
+    }
+    return null;
   }
 
   void _handleAuthSuccess() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomePage()),
+    );
+  }
+
+  String? _readToken(Map<String, dynamic> response) {
+    final data = response['data'];
+    if (data is Map && data['token'] is String) {
+      return data['token'] as String;
+    }
+    return null;
+  }
+
+  String _readErrorMessage(Map<String, dynamic> response) {
+    final error = response['error'];
+    if (error is Map) {
+      final details = error['details'];
+      if (details is Map && details['error'] is String) {
+        log("Error message: ${error['details']}");
+        return details['error'] as String;
+      }
+      if (error['message'] is String) {
+        log("Error message: ${error['message']}");
+        return error['message'] as String;
+      }
+    }
+    log(  "Error message: unknown error $response");
+    return 'Connexion impossible.';
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Connexion impossible'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }

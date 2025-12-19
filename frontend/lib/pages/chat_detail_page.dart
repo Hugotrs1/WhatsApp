@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/chat.dart';
-import '../utils/app_colors.dart';
+import '../styles/whatsapp_style.dart';
 import '../widget/avatar.dart';
 import '../widget/message_bubble.dart';
 
@@ -35,7 +35,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: WhatsAppStyles.backgroundColor,
       appBar: AppBar(
         leadingWidth: 90,
         titleSpacing: 0,
@@ -100,20 +100,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
+                      decoration: WhatsAppStyles.messageComposerDecoration,
                       child: Row(
                         children: [
                           Expanded(
                             child: TextField(
                               controller: _controller,
-                              decoration: const InputDecoration(
-                                hintText: 'Message',
-                                border: InputBorder.none,
-                              ),
+                              decoration: WhatsAppStyles.messageInputDecoration,
                               minLines: 1,
                               maxLines: 4,
                             ),
@@ -132,7 +125,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   CircleAvatar(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: WhatsAppStyles.primaryColor,
                     child: IconButton(
                       icon: const Icon(Icons.send, color: Colors.white),
                       onPressed: _sendMessage,

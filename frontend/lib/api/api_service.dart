@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   ApiService({
@@ -16,12 +17,29 @@ class ApiService {
   final http.Client _client;
   final Duration _timeout;
 
+  static const String _tokenKey = 'auth_token';
+
   static String _defaultBaseUrl() {
     if (kIsWeb) return 'http://127.0.0.1:8080';
     if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://127.0.0.1:8080';
     }
     return 'http://127.0.0.1:8080';
+  }
+
+  Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
   }
 
   Future<Map<String, dynamic>> login({
@@ -109,6 +127,10 @@ class ApiService {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
+    final token = await getToken();
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     try {
       final encodedBody = body == null ? null : jsonEncode(body);

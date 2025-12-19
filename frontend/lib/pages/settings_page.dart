@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../utils/app_colors.dart';
+import '../styles/whatsapp_style.dart';
 import '../utils/mock_data.dart';
 import '../widget/avatar.dart';
 
@@ -76,15 +76,15 @@ class _SettingsTile extends StatelessWidget {
       children: [
         ListTile(
           leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-            child: Icon(icon, color: AppColors.primary),
+            backgroundColor: WhatsAppStyles.primaryColor.withValues(alpha: 0.08),
+            child: Icon(icon, color: WhatsAppStyles.primaryColor),
           ),
           title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(subtitle),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {},
         ),
-        const Divider(height: 1),
+        Divider(height: 1, color: WhatsAppStyles.dividerColor),
       ],
     );
   }

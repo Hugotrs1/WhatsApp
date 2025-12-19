@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/app_colors.dart';
+
+import '../styles/whatsapp_style.dart';
 import 'chats_page.dart';
 import 'settings_page.dart';
 import 'status_page.dart';
@@ -44,8 +45,8 @@ class _HomePageState extends State<HomePage> {
       
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey.shade700,
+        selectedItemColor: WhatsAppStyles.primaryColor,
+        unselectedItemColor: WhatsAppStyles.mutedTextColor,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Discussions'),
@@ -84,7 +85,7 @@ class _HomePageState extends State<HomePage> {
     }
     if (icon == null) return null;
     return FloatingActionButton(
-      backgroundColor: AppColors.primary,
+      backgroundColor: WhatsAppStyles.primaryColor,
       onPressed: () {},
       child: Icon(icon, color: Colors.white),
     );

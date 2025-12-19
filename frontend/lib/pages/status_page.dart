@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/status_update.dart';
+import '../styles/whatsapp_style.dart';
 import '../utils/mock_data.dart';
 import '../widget/avatar.dart';
 import '../widget/section_header.dart';
@@ -37,8 +38,8 @@ class StatusPage extends StatelessWidget {
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: WhatsAppStyles.backgroundColor,
                       shape: BoxShape.circle,
                     ),
                     child: const CircleAvatar(

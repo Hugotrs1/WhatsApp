@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/chat.dart';
+import '../styles/whatsapp_style.dart';
 import '../utils/mock_data.dart';
 import '../widget/chat_list_tile.dart';
 import 'chat_detail_page.dart';
@@ -33,11 +34,11 @@ class _ChatsPageState extends State<ChatsPage> {
               prefixIcon: const Icon(Icons.search),
               contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: WhatsAppStyles.searchBorderRadius,
+                borderSide: BorderSide(color: WhatsAppStyles.dividerColor),
               ),
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: WhatsAppStyles.searchFillColor,
             ),
             onChanged: (value) => setState(() => _query = value),
           ),
@@ -51,7 +52,7 @@ class _ChatsPageState extends State<ChatsPage> {
                 onTap: () => _openChat(chat),
               );
             },
-            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade300),
+            separatorBuilder: (_, __) => Divider(height: 1, color: WhatsAppStyles.dividerColor),
             itemCount: filteredChats.length,
           ),
         ),
