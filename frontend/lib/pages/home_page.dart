@@ -1,21 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../api/api_service.dart';
 import '../styles/whatsapp_style.dart';
+import 'add_contact_page.dart';
 import 'chats_page.dart';
 import 'settings_page.dart';
-import 'status_page.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return const MainScaffold();
+  }
 }
 
-class _HomePageState extends State<HomePage> {
+class MainScaffold extends StatefulWidget {
+  const MainScaffold({super.key});
+
+  @override
+  State<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends State<MainScaffold> {
   final List<Widget> _pages = const [
     ChatsPage(),
-    StatusPage(),
+    AddContactPage(),
     SettingsPage(),
   ];
   int _currentIndex = 0;
@@ -26,68 +36,80 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text(_titleForIndex(_currentIndex)),
         actions: [
-          if (_currentIndex != 2) IconButton(onPressed: () {}, icon: const Icon(Icons.photo_camera_outlined)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: _pages,
-            ),
+          IconButton(
+            onPressed: _handleLogout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Deconnexion',
           ),
-          
         ],
       ),
-      
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
         selectedItemColor: WhatsAppStyles.primaryColor,
         unselectedItemColor: WhatsAppStyles.mutedTextColor,
+        showUnselectedLabels: true,
         onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Discussions'),
-          BottomNavigationBarItem(icon: Icon(Icons.timelapse_outlined), label: 'Statuts'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Réglages'),
+        items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.message),
+            label: 'Messages',
+          ),
+          _buildAddItem(),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Param\u00E8tres',
+          ),
         ],
       ),
-      floatingActionButton: _buildFab(),
     );
   }
 
   String _titleForIndex(int index) {
     switch (index) {
       case 0:
-        return 'WhatsApp';
+        return 'Messages';
       case 1:
-        return 'Statuts';
+        return 'Ajout de contact';
       case 2:
-        return 'Réglages';
+        return 'Param\u00E8tres';
       default:
-        return 'WhatsApp';
+        return 'Messages';
     }
   }
 
-  Widget? _buildFab() {
-    IconData? icon;
-    switch (_currentIndex) {
-      case 0:
-        icon = Icons.message;
-        break;
-      case 1:
-        icon = Icons.photo_camera_outlined;
-        break;
-      default:
-        icon = null;
-    }
-    if (icon == null) return null;
-    return FloatingActionButton(
-      backgroundColor: WhatsAppStyles.primaryColor,
-      onPressed: () {},
-      child: Icon(icon, color: Colors.white),
+  BottomNavigationBarItem _buildAddItem() {
+    final icon = Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: WhatsAppStyles.primaryColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.add, color: Colors.white),
     );
+
+    return BottomNavigationBarItem(
+      icon: icon,
+      activeIcon: icon,
+      label: 'Plus',
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    await ApiService().clearToken();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 }
