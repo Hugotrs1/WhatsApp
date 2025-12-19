@@ -8,3 +8,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE messages (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sender_id BIGINT UNSIGNED NOT NULL,
+    receiver_id BIGINT UNSIGNED NOT NULL,
+    content VARCHAR(200) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_conversation (sender_id, receiver_id),
+    INDEX idx_created (created_at),
+
+    CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
+    CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
+);
