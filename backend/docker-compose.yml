@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/var/www/public
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+    networks:
+      - whatsapp_net
+
+  php:
+    build: ./docker/php
+    volumes:
+      - .:/var/www
+    networks:
+      - whatsapp_net
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: whatsapp
+      MYSQL_USER: whatsapp
+      MYSQL_PASSWORD: whatsapp
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - whatsapp_net
+
+networks:
+  whatsapp_net:
+
+volumes:
+  db_data:
