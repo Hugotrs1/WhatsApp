@@ -5,11 +5,11 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../api/api_service.dart';
+import '../api/apiService.dart';
 import '../models/chat.dart';
-import '../styles/whatsapp_style.dart';
+import '../styles/styles.dart';
 import '../widget/avatar.dart';
-import '../widget/message_bubble.dart';
+import '../widget/messageView.dart';
 
 class ChatDetailPage extends StatefulWidget {
   const ChatDetailPage({super.key, required this.chat});

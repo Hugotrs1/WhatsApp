@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../api/api_service.dart';
-import '../styles/whatsapp_style.dart';
-import 'add_contact_page.dart';
-import 'chats_page.dart';
-import 'settings_page.dart';
+import '../api/apiService.dart';
+import '../styles/styles.dart';
+import 'addContactPage.dart';
+import 'messagerie.dart';
+import 'settings.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -108,9 +108,9 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Future<void> _handleLogout() async {
+    await ApiService().clearConnectionStatus();
     await ApiService().clearToken();
     await ApiService().clearRememberedCredentials();
-    await ApiService().clearConnectionStatus();
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }

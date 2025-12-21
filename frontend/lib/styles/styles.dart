@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'app_theme.dart';
+import 'appTheme.dart';
 
 class WhatsAppStyles {
   WhatsAppStyles._();

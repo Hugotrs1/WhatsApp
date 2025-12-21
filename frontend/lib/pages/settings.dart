@@ -1,11 +1,34 @@
 import 'package:flutter/material.dart';
 
-import '../styles/whatsapp_style.dart';
+import '../api/apiService.dart';
+import '../styles/styles.dart';
 import '../utils/mock_data.dart';
 import '../widget/avatar.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late final ApiService _apiService;
+  bool _estConnecte = true;
+  bool _isLoadingStatus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService();
+    _loadConnectionStatus();
+  }
+
+  @override
+  void dispose() {
+    _apiService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +63,25 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
+        SwitchListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+          value: _estConnecte,
+          onChanged: _isLoadingStatus ? null : _toggleConnectionStatus,
+          activeColor: WhatsAppStyles.primaryColor,
+          title: const Text('En ligne', style: TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text(
+            _estConnecte ? 'Statut visible' : 'Statut masque',
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ),
+        Divider(height: 1, color: WhatsAppStyles.dividerColor),
         _SettingsTile(icon: Icons.vpn_key, title: 'Compte', subtitle: 'Confidentialité, sécurité, changer de numéro'),
         _SettingsTile(icon: Icons.lock_outline, title: 'Confidentialité', subtitle: 'Verrouillage par empreinte, contacts bloqués'),
         _SettingsTile(icon: Icons.chat_bubble_outline, title: 'Discussions', subtitle: 'Thèmes, fonds d’écran, historique'),
         _SettingsTile(icon: Icons.notifications_none, title: 'Notifications', subtitle: 'Sons de message, groupes, appels'),
         _SettingsTile(icon: Icons.data_saver_off, title: 'Stockage et données', subtitle: 'Utilisation réseau, téléchargement auto'),
         _SettingsTile(icon: Icons.help_outline, title: 'Aide', subtitle: 'Centre d’aide, contact'),
+        
         const SizedBox(height: 24),
         Center(
           child: Text(
@@ -56,6 +92,22 @@ class SettingsPage extends StatelessWidget {
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  Future<void> _loadConnectionStatus() async {
+    final status = await _apiService.getConnectionStatus();
+    if (!mounted) return;
+    setState(() {
+      _estConnecte = status;
+      _isLoadingStatus = false;
+    });
+  }
+
+  Future<void> _toggleConnectionStatus(bool value) async {
+    setState(() {
+      _estConnecte = value;
+    });
+    await _apiService.saveConnectionStatus(estConnecte: value);
   }
 }
 

@@ -67,15 +67,47 @@ class ApiService {
   }
 
   Future<void> saveConnectionStatus({required bool estConnecte}) async {
-    await spSave<bool>(_connectionStatusKey, estConnecte);
+    final key = await _connectionStatusKeyForUser();
+    await spSave<bool>(key, estConnecte);
   }
 
   Future<bool> getConnectionStatus() async {
-    return (await spGet<bool>(_connectionStatusKey)) ?? false;
+    final key = await _connectionStatusKeyForUser();
+    return (await spGet<bool>(key)) ?? false;
   }
 
   Future<void> clearConnectionStatus() async {
-    await spDelete(_connectionStatusKey);
+    final key = await _connectionStatusKeyForUser();
+    await spDelete(key);
+    if (key != _connectionStatusKey) {
+      await spDelete(_connectionStatusKey);
+    }
+  }
+
+  Future<String> _connectionStatusKeyForUser() async {
+    final token = await getToken();
+    final userId = _decodeUserId(token);
+    if (userId == null) return _connectionStatusKey;
+    return '${_connectionStatusKey}_$userId';
+  }
+
+  int? _decodeUserId(String? token) {
+    if (token == null || token.isEmpty) return null;
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = utf8.decode(base64Url.decode(normalized));
+      final data = jsonDecode(payload);
+      if (data is Map<String, dynamic>) {
+        final sub = data['sub'];
+        if (sub is int) return sub;
+        if (sub is String) return int.tryParse(sub);
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>> login({

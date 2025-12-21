@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../styles/whatsapp_style.dart';
+import '../styles/styles.dart';
 
 class AddContactPage extends StatefulWidget {
   const AddContactPage({super.key});

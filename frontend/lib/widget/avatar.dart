@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../utils/app_colors.dart';
+import '../utils/appColors.dart';
 
 class Avatar extends StatelessWidget {
   const Avatar({

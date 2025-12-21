@@ -3,10 +3,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:whatsapp/api/api_service.dart';
+import 'package:whatsapp/api/apiService.dart';
 
-import '../styles/app_theme.dart';
-import 'home_page.dart';
+import '../styles/appTheme.dart';
+import 'accueil.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -32,7 +32,6 @@ class _AuthPageState extends State<AuthPage> {
   bool _showSignupPassword = false;
   bool _showSignupConfirmPassword = false;
   bool _rememberMe = false;
-  bool _estConnecte = true;
   bool _animateIn = false;
   bool _isLoggingIn = false;
   bool _isRegistering = false;
@@ -324,29 +323,6 @@ class _AuthPageState extends State<AuthPage> {
                   fontWeight: FontWeight.w600,
                   color: AppTheme.brandDark,
                   fontSize: 13,
-                ),
-              ),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _estConnecte,
-              onChanged: (value) => setState(() => _estConnecte = value),
-              dense: true,
-              activeColor: AppTheme.accent,
-              title: Text(
-                'estConnecte',
-                style: GoogleFonts.sora(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.brandDark,
-                  fontSize: 13,
-                ),
-              ),
-              subtitle: Text(
-                _estConnecte ? 'En ligne' : 'Hors ligne',
-                style: GoogleFonts.sora(
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.muted,
-                  fontSize: 12,
                 ),
               ),
             ),
@@ -714,7 +690,7 @@ class _AuthPageState extends State<AuthPage> {
         } else {
           await ApiService().clearRememberedCredentials();
         }
-        await ApiService().saveConnectionStatus(estConnecte: _estConnecte);
+        await ApiService().saveConnectionStatus(estConnecte: true);
         _handleAuthSuccess();
       } else if (response['ok'] == true && token == null) {
         _showErrorDialog('Connexion impossible. Token manquant.');

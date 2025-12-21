@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'pages/auth_page.dart';
-import 'styles/app_theme.dart';
+import 'pages/connexion.dart';
+import 'styles/appTheme.dart';
 
 void main() {
   runApp(const WhatsappApp());

@@ -2,11 +2,11 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
-import '../api/api_service.dart';
+import '../api/apiService.dart';
 import '../models/chat.dart';
-import '../styles/whatsapp_style.dart';
-import '../widget/chat_list_tile.dart';
-import 'chat_detail_page.dart';
+import '../styles/styles.dart';
+import '../widget/chatListTile.dart';
+import 'chatDetail.dart';
 
 class ChatsPage extends StatefulWidget {
   const ChatsPage({super.key});

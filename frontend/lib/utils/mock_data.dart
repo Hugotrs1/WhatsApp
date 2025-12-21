@@ -1,5 +1,5 @@
 import '../models/chat.dart';
-import '../models/status_update.dart';
+import '../models/status.dart';
 
 final DateTime _now = DateTime.now();
 
