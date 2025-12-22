@@ -1,8 +1,6 @@
 import 'dart:developer';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:whatsapp/api/apiService.dart';
 
 import '../styles/appTheme.dart';
@@ -32,7 +30,6 @@ class _AuthPageState extends State<AuthPage> {
   bool _showSignupPassword = false;
   bool _showSignupConfirmPassword = false;
   bool _rememberMe = false;
-  bool _animateIn = false;
   bool _isLoggingIn = false;
   bool _isRegistering = false;
 
@@ -40,12 +37,6 @@ class _AuthPageState extends State<AuthPage> {
   void initState() {
     super.initState();
     _loadRememberedCredentials();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(() {
-        _animateIn = true;
-      });
-    });
   }
 
   @override
@@ -68,82 +59,54 @@ class _AuthPageState extends State<AuthPage> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.brandDark,
-                AppTheme.brandMid,
-                AppTheme.brandLight,
-              ],
-              stops: [0.0, 0.55, 1.0],
+        backgroundColor: AppTheme.brandLight,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
+              20,
+              24,
+              20,
+              28 + media.viewInsets.bottom,
             ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -60,
-                left: -40,
-                child: _buildGlow(200, const Color(0x6629D3B0)),
-              ),
-              Positioned(
-                top: 140,
-                right: -70,
-                child: _buildGlow(240, const Color(0x664AC5FF)),
-              ),
-              Positioned(
-                bottom: -120,
-                left: -90,
-                child: _buildGlow(280, const Color(0x6645E6AE)),
-              ),
-              SafeArea(
-                child: SingleChildScrollView(
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    24,
-                    20,
-                    28 + media.viewInsets.bottom,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AnimatedSlide(
-                        offset: _animateIn ? Offset.zero : const Offset(0, -0.08),
-                        duration: const Duration(milliseconds: 650),
-                        curve: Curves.easeOutCubic,
-                        child: AnimatedOpacity(
-                          opacity: _animateIn ? 1 : 0,
-                          duration: const Duration(milliseconds: 650),
-                          child: _buildHeader(),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      AnimatedSlide(
-                        offset: _animateIn ? Offset.zero : const Offset(0, 0.08),
-                        duration: const Duration(milliseconds: 650),
-                        curve: Curves.easeOutCubic,
-                        child: AnimatedOpacity(
-                          opacity: _animateIn ? 1 : 0,
-                          duration: const Duration(milliseconds: 650),
-                          child: _buildAuthCard(context, cardHeight),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 24),
+                _buildAuthCard(context, cardHeight),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final titleStyle = textTheme.headlineSmall?.copyWith(
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+          letterSpacing: 0.3,
+        ) ??
+        const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+          letterSpacing: 0.3,
+        );
+    final subtitleStyle = textTheme.bodyMedium?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        ) ??
+        const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -152,111 +115,102 @@ class _AuthPageState extends State<AuthPage> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.16),
+                color: AppTheme.brandMid,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.chipBorder),
               ),
               child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
             ),
             const SizedBox(width: 12),
             Text(
               'WhatsApp',
-              style: GoogleFonts.sora(
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 0.3,
-              ),
+              style: titleStyle,
             ),
           ],
         ),
         const SizedBox(height: 14),
         Text(
           'Discute vite, clair, et sans effort.',
-          style: GoogleFonts.sora(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white.withOpacity(0.82),
-          ),
+          style: subtitleStyle,
         ),
       ],
     );
   }
   Widget _buildAuthCard(BuildContext context, double cardHeight) {
+    final textTheme = Theme.of(context).textTheme;
+    final tabLabelStyle = textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ) ??
+        const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        );
     return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: AppTheme.cardBorderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        border: Border.all(color: AppTheme.divider),
       ),
-      child: ClipRRect(
-        borderRadius: AppTheme.cardBorderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.86),
-              borderRadius: AppTheme.cardBorderRadius,
-              border: Border.all(color: AppTheme.cardBorder),
-            ),
-            child: Column(
+      child: Column(
+        children: [
+          TabBar(
+            labelColor: AppTheme.brandDark,
+            unselectedLabelColor: AppTheme.muted,
+            indicatorColor: AppTheme.accent,
+            labelStyle: tabLabelStyle,
+            tabs: const [
+              Tab(text: 'Connexion'),
+              Tab(text: 'Inscription'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: cardHeight,
+            child: TabBarView(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: TabBar(
-                    labelColor: Colors.white,
-                    unselectedLabelColor: AppTheme.tabMuted,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelStyle: GoogleFonts.sora(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                    indicator: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: AppTheme.primaryGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.accentDark.withOpacity(0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    tabs: const [
-                      Tab(text: 'Connexion'),
-                      Tab(text: 'Inscription'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: cardHeight,
-                  child: TabBarView(
-                    children: [
-                      _buildLoginForm(context),
-                      _buildSignupForm(context),
-                    ],
-                  ),
-                ),
+                _buildLoginForm(context),
+                _buildSignupForm(context),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildLoginForm(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final titleStyle = textTheme.titleMedium?.copyWith(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+        ) ??
+        const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+        );
+    final subtitleStyle = textTheme.bodySmall?.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        ) ??
+        const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        );
+    final checkboxStyle = textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: AppTheme.brandDark,
+          fontSize: 13,
+        ) ??
+        const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: AppTheme.brandDark,
+          fontSize: 13,
+        );
     return Form(
       key: _loginFormKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -267,31 +221,26 @@ class _AuthPageState extends State<AuthPage> {
           children: [
             Text(
               'Heureux de te revoir',
-              style: GoogleFonts.sora(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.brandDark,
-              ),
+              style: titleStyle,
             ),
             const SizedBox(height: 6),
             Text(
               'Entre tes identifiants pour continuer.',
-              style: GoogleFonts.sora(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.muted,
-              ),
+              style: subtitleStyle,
             ),
             const SizedBox(height: 18),
             _buildFormField(
+              context,
               controller: _loginPhoneController,
               label: 'Telephone',
               keyboardType: TextInputType.phone,
+              inputFormatters: [LengthLimitingTextInputFormatter(10)],
               icon: Icons.phone_iphone_outlined,
               validator: _phoneValidator,
             ),
             const SizedBox(height: 14),
             _buildFormField(
+              context,
               controller: _loginPasswordController,
               label: 'Mot de passe',
               obscureText: !_showLoginPassword,
@@ -319,37 +268,21 @@ class _AuthPageState extends State<AuthPage> {
               activeColor: AppTheme.accent,
               title: Text(
                 'Se souvenir de moi',
-                style: GoogleFonts.sora(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.brandDark,
-                  fontSize: 13,
-                ),
+                style: checkboxStyle,
               ),
             ),
             const SizedBox(height: 4),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              runSpacing: 4,
-              children: [
-                TextButton(
-                  onPressed: _handleAuthSuccess,
-                  style: TextButton.styleFrom(foregroundColor: AppTheme.tabMuted),
-                  child: Text(
-                    'Skip',
-                    style: GoogleFonts.sora(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Mot de passe oublie ?',
-                    style: GoogleFonts.sora(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _handleAuthSuccess,
+                style: TextButton.styleFrom(foregroundColor: AppTheme.tabMuted),
+                child: const Text('Skip'),
+              ),
             ),
             const SizedBox(height: 16),
             _buildPrimaryButton(
+              context,
               label: 'Se connecter',
               onPressed: _handleLogin,
             ),
@@ -360,6 +293,27 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Widget _buildSignupForm(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final titleStyle = textTheme.titleMedium?.copyWith(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+        ) ??
+        const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.brandDark,
+        );
+    final subtitleStyle = textTheme.bodySmall?.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        ) ??
+        const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppTheme.muted,
+        );
     return Form(
       key: _signupFormKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -370,23 +324,16 @@ class _AuthPageState extends State<AuthPage> {
           children: [
             Text(
               'Creer un compte',
-              style: GoogleFonts.sora(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.brandDark,
-              ),
+              style: titleStyle,
             ),
             const SizedBox(height: 6),
             Text(
               'Rejoins tes amis et tes groupes en quelques secondes.',
-              style: GoogleFonts.sora(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.muted,
-              ),
+              style: subtitleStyle,
             ),
             const SizedBox(height: 18),
             _buildFormField(
+              context,
               controller: _signupNameController,
               label: 'Nom',
               textCapitalization: TextCapitalization.words,
@@ -395,6 +342,7 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 14),
             _buildFormField(
+              context,
               controller: _signupFirstNameController,
               label: 'Prenom',
               textCapitalization: TextCapitalization.words,
@@ -403,14 +351,17 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 14),
             _buildFormField(
+              context,
               controller: _signupPhoneController,
               label: 'Telephone',
               keyboardType: TextInputType.phone,
+              inputFormatters: [LengthLimitingTextInputFormatter(10)],
               icon: Icons.phone_iphone_outlined,
               validator: _phoneValidator,
             ),
             const SizedBox(height: 14),
             _buildFormField(
+              context,
               controller: _signupPasswordController,
               label: 'Mot de passe',
               obscureText: !_showSignupPassword,
@@ -424,6 +375,7 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 14),
             _buildFormField(
+              context,
               controller: _signupConfirmController,
               label: 'Confirmer le mot de passe',
               obscureText: !_showSignupConfirmPassword,
@@ -439,7 +391,8 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 16),
             _buildPrimaryButton(
-              label: 'Creer un compte',
+              context,
+              label: 'Créer un compte',
               onPressed: _handleRegister,
             ),
           ],
@@ -448,7 +401,8 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Widget _buildFormField({
+  Widget _buildFormField(
+    BuildContext context, {
     required TextEditingController controller,
     required String label,
     TextInputType? keyboardType,
@@ -458,7 +412,19 @@ class _AuthPageState extends State<AuthPage> {
     String? Function(String?)? validator,
     Widget? suffixIcon,
     IconData? icon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
+    final textTheme = Theme.of(context).textTheme;
+    final fieldStyle = textTheme.bodyMedium?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.brandDark,
+        ) ??
+        const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.brandDark,
+        );
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -467,11 +433,8 @@ class _AuthPageState extends State<AuthPage> {
       autocorrect: !isPassword,
       textCapitalization: textCapitalization,
       validator: validator,
-      style: GoogleFonts.sora(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: AppTheme.brandDark,
-      ),
+      inputFormatters: inputFormatters,
+      style: fieldStyle,
       decoration: _inputDecoration(
         label: label,
         icon: icon,
@@ -505,41 +468,29 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Widget _buildPrimaryButton({
+  Widget _buildPrimaryButton(
+    BuildContext context, {
     required String label,
     required VoidCallback onPressed,
   }) {
+    final textTheme = Theme.of(context).textTheme;
+    final buttonTextStyle = textTheme.labelLarge?.copyWith(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ) ??
+        const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        );
     return SizedBox(
       height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppTheme.primaryGradient,
-          borderRadius: AppTheme.buttonBorderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.accentDark.withOpacity(0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: AppTheme.buttonBorderRadius),
+          textStyle: buttonTextStyle,
         ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: AppTheme.buttonBorderRadius),
-            textStyle: GoogleFonts.sora(fontWeight: FontWeight.w700),
-          ),
-          child: Text(
-            label,
-            style: GoogleFonts.sora(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
+        child: Text(label),
       ),
     );
   }
@@ -754,19 +705,4 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  static Widget _buildGlow(double size, Color color) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            color,
-            color.withOpacity(0),
-          ],
-        ),
-      ),
-    );
-  }
 }

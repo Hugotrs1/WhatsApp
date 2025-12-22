@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   AppTheme._();
@@ -41,8 +40,8 @@ class AppTheme {
       scaffoldBackgroundColor: brandLight,
     );
 
-    final textTheme = GoogleFonts.soraTextTheme(base.textTheme).copyWith(
-      titleLarge: GoogleFonts.sora(
+    final textTheme = base.textTheme.copyWith(
+      titleLarge: base.textTheme.titleLarge?.copyWith(
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: brandDark,
@@ -55,30 +54,39 @@ class AppTheme {
         backgroundColor: brandMid,
         foregroundColor: Colors.white,
         elevation: 0,
-        titleTextStyle: GoogleFonts.sora(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-        ),
+        titleTextStyle: textTheme.titleMedium?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ) ??
+            const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
       ),
       dividerColor: divider,
       snackBarTheme: SnackBarThemeData(
         backgroundColor: brandDark,
-        contentTextStyle: GoogleFonts.sora(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ) ??
+            const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
         behavior: SnackBarBehavior.floating,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: fieldFill,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        labelStyle: GoogleFonts.sora(
+        labelStyle: TextStyle(
           fontWeight: FontWeight.w600,
           color: brandDark.withOpacity(0.65),
         ),
-        floatingLabelStyle: GoogleFonts.sora(
+        floatingLabelStyle: const TextStyle(
           fontWeight: FontWeight.w700,
           color: accentDark,
         ),
@@ -103,13 +111,13 @@ class AppTheme {
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
           shape: const RoundedRectangleBorder(borderRadius: buttonBorderRadius),
-          textStyle: GoogleFonts.sora(fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accentDark,
-          textStyle: GoogleFonts.sora(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
