@@ -234,7 +234,10 @@ class _AuthPageState extends State<AuthPage> {
               controller: _loginPhoneController,
               label: 'Telephone',
               keyboardType: TextInputType.phone,
-              inputFormatters: [LengthLimitingTextInputFormatter(10)],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(18),
+              ],
               icon: Icons.phone_iphone_outlined,
               validator: _phoneValidator,
             ),
@@ -355,7 +358,10 @@ class _AuthPageState extends State<AuthPage> {
               controller: _signupPhoneController,
               label: 'Telephone',
               keyboardType: TextInputType.phone,
-              inputFormatters: [LengthLimitingTextInputFormatter(10)],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(18),
+              ],
               icon: Icons.phone_iphone_outlined,
               validator: _phoneValidator,
             ),
@@ -507,12 +513,12 @@ class _AuthPageState extends State<AuthPage> {
     if (trimmed.isEmpty) {
       return 'Merci de renseigner Telephone.';
     }
-    final normalized = trimmed.replaceAll(RegExp(r'[\s()-]'), '');
-    if (!RegExp(r'^\+?\d+$').hasMatch(normalized)) {
+    final normalized = ApiService.normalizePhone(trimmed);
+    if (!RegExp(r'^\d+$').hasMatch(normalized)) {
       return 'Numero invalide.';
     }
-    if (normalized.replaceFirst('+', '').length < 6) {
-      return 'Numero trop court.';
+    if (normalized.length != 10) {
+      return 'Numero invalide.';
     }
     return null;
   }
@@ -531,17 +537,16 @@ class _AuthPageState extends State<AuthPage> {
     final saved = await ApiService().getRememberedCredentials();
     if (!mounted || saved == null) return;
     _loginPhoneController.text = saved['phone'] ?? '';
-    _loginPasswordController.text = saved['password'] ?? '';
+    _loginPasswordController.clear();
     setState(() => _rememberMe = true);
   }
 
   Future<void> _saveRememberedCredentials() async {
-    final phone = _loginPhoneController.text.trim();
-    final password = _loginPasswordController.text;
-    if (phone.isEmpty || password.isEmpty) return;
+    final phone = ApiService.normalizePhone(_loginPhoneController.text.trim());
+    if (phone.isEmpty) return;
     await ApiService().saveRememberedCredentials(
       phone: phone,
-      password: password,
+      password: _loginPasswordController.text,
     );
   }
 
@@ -627,7 +632,7 @@ class _AuthPageState extends State<AuthPage> {
     try {
       final response = await ApiService().login(
         password: _loginPasswordController.text.trim(),
-        phone: _loginPhoneController.text.trim(),
+        phone: ApiService.normalizePhone(_loginPhoneController.text.trim()),
       );
       final token = _readToken(response);
       if (token != null) {
@@ -646,6 +651,15 @@ class _AuthPageState extends State<AuthPage> {
       } else if (response['ok'] == true && token == null) {
         _showErrorDialog('Connexion impossible. Token manquant.');
       } else {
+        final status = response['status'];
+        if (status == 401 || status == 422) {
+          await ApiService().clearAuthState(clearRemembered: true);
+          if (!mounted) return;
+          _loginPasswordController.clear();
+          if (_rememberMe) {
+            setState(() => _rememberMe = false);
+          }
+        }
         final message = _readErrorMessage(response);
         _showErrorDialog(message);
       }
@@ -675,7 +689,7 @@ class _AuthPageState extends State<AuthPage> {
       final response = await ApiService().register(
         lastName: _signupNameController.text.trim(),
         firstName: _signupFirstNameController.text.trim(),
-        phone: _signupPhoneController.text.trim(),
+        phone: ApiService.normalizePhone(_signupPhoneController.text.trim()),
         password: _signupPasswordController.text.trim(),
       );
       log('Response: $response');

@@ -27,9 +27,31 @@ class ApiService {
 
   static String _defaultBaseUrl() {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://127.0.0.1:8080';
+      return 'http://172.20.10.2:8080';
     }
-    return 'http://127.0.0.1:8080';
+    return 'http://172.20.10.2:8080';
+  }
+
+  static String normalizePhone(String value) {
+    var digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('0033')) {
+      digits = digits.substring(2);
+    }
+    if (digits.startsWith('33')) {
+      final rest = digits.substring(2);
+      if (rest.length == 9) {
+        return '0$rest';
+      }
+      if (rest.length == 10 && rest.startsWith('0')) {
+        return rest;
+      }
+    }
+    return digits;
+  }
+
+  static bool isValidPhone(String value) {
+    final normalized = normalizePhone(value);
+    return RegExp(r'^\d{10}$').hasMatch(normalized);
   }
 
   Future<void> saveToken(String token) async {
@@ -37,7 +59,18 @@ class ApiService {
   }
 
   Future<String?> getToken() async {
-    return spGet<String>(_tokenKey);
+    final token = await spGet<String>(_tokenKey);
+    if (token == null || token.isEmpty) return null;
+    if (_isTokenExpired(token)) {
+      final userId = _decodeUserId(token);
+      await spDelete(_tokenKey);
+      await spDelete(_connectionStatusKey);
+      if (userId != null) {
+        await spDelete('${_connectionStatusKey}_$userId');
+      }
+      return null;
+    }
+    return token;
   }
 
   Future<void> clearToken() async {
@@ -48,17 +81,20 @@ class ApiService {
     required String phone,
     required String password,
   }) async {
-    await spSave<String>(_rememberPhoneKey, phone);
-    await spSave<String>(_rememberPasswordKey, password);
+    await spSave<String>(_rememberPhoneKey, normalizePhone(phone));
+    await spDelete(_rememberPasswordKey);
   }
 
   Future<Map<String, String>?> getRememberedCredentials() async {
     final phone = await spGet<String>(_rememberPhoneKey);
-    final password = await spGet<String>(_rememberPasswordKey);
-    if (phone == null || phone.isEmpty || password == null || password.isEmpty) {
+    if (phone == null || phone.isEmpty) {
       return null;
     }
-    return {'phone': phone, 'password': password};
+    final legacyPassword = await spGet<String>(_rememberPasswordKey);
+    if (legacyPassword != null && legacyPassword.isNotEmpty) {
+      await spDelete(_rememberPasswordKey);
+    }
+    return {'phone': phone};
   }
 
   Future<void> clearRememberedCredentials() async {
@@ -84,6 +120,14 @@ class ApiService {
     }
   }
 
+  Future<void> clearAuthState({bool clearRemembered = false}) async {
+    await clearConnectionStatus();
+    await clearToken();
+    if (clearRemembered) {
+      await clearRememberedCredentials();
+    }
+  }
+
   Future<String> _connectionStatusKeyForUser() async {
     final token = await getToken();
     final userId = _decodeUserId(token);
@@ -93,32 +137,47 @@ class ApiService {
 
   int? _decodeUserId(String? token) {
     if (token == null || token.isEmpty) return null;
+    final data = _decodeJwtPayload(token);
+    if (data == null) return null;
+    final sub = data['sub'];
+    if (sub is int) return sub;
+    if (sub is String) return int.tryParse(sub);
+    return null;
+  }
+
+  bool _isTokenExpired(String token) {
+    final data = _decodeJwtPayload(token);
+    if (data == null) return false;
+    final exp = data['exp'];
+    final expSeconds = exp is int ? exp : exp is String ? int.tryParse(exp) : null;
+    if (expSeconds == null) return false;
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return nowSeconds >= expSeconds;
+  }
+
+  Map<String, dynamic>? _decodeJwtPayload(String token) {
     final parts = token.split('.');
     if (parts.length != 3) return null;
     try {
       final normalized = base64Url.normalize(parts[1]);
       final payload = utf8.decode(base64Url.decode(normalized));
       final data = jsonDecode(payload);
-      if (data is Map<String, dynamic>) {
-        final sub = data['sub'];
-        if (sub is int) return sub;
-        if (sub is String) return int.tryParse(sub);
-      }
+      return data is Map<String, dynamic> ? data : null;
     } catch (_) {
       return null;
     }
-    return null;
   }
 
   Future<Map<String, dynamic>> login({
     required String phone,
     required String password,
   }) {
+    final normalizedPhone = normalizePhone(phone);
     return _request(
       'POST',
       '/api/login',
       body: {
-        'phone': phone,
+        'phone': normalizedPhone,
         'password': password,
       },
     );
@@ -130,13 +189,14 @@ class ApiService {
     required String phone,
     required String password,
   }) {
+    final normalizedPhone = normalizePhone(phone);
     return _request(
       'POST',
       '/api/register',
       body: {
         'first_name': firstName,
         'last_name': lastName,
-        'phone': phone,
+        'phone': normalizedPhone,
         'password': password,
       },
     );
@@ -305,6 +365,9 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return _ok(status: response.statusCode, data: parsed);
       }
+      if (response.statusCode == 401) {
+        await clearAuthState();
+      }
       developer.log(
         'HTTP error ${response.statusCode} for $uri',
         name: 'ApiService',
@@ -353,6 +416,9 @@ class ApiService {
       final parsed = _tryParseJson(body);
       if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
         return _ok(status: streamed.statusCode, data: parsed);
+      }
+      if (streamed.statusCode == 401) {
+        await clearAuthState();
       }
       developer.log(
         'HTTP error ${streamed.statusCode} for $uri',
@@ -435,6 +501,10 @@ class ApiService {
       if (message is String && message.trim().isNotEmpty) {
         return message.trim();
       }
+      final fieldMessage = _extractFieldError(details);
+      if (fieldMessage != null) {
+        return fieldMessage;
+      }
       final error = details['error'];
       if (error is String && error.trim().isNotEmpty) {
         return error.trim();
@@ -454,6 +524,47 @@ class ApiService {
       return trimmed.isEmpty ? null : trimmed;
     }
     return null;
+  }
+
+  String? _extractFieldError(Map details) {
+    final fieldErrors = details['details'];
+    if (fieldErrors is! Map || fieldErrors.isEmpty) {
+      return null;
+    }
+    final entry = fieldErrors.entries.first;
+    final field = entry.key.toString();
+    final code = entry.value.toString();
+    return _formatFieldError(field, code);
+  }
+
+  String? _formatFieldError(String field, String code) {
+    final label = _fieldLabel(field);
+    if (label == null) {
+      return null;
+    }
+    switch (code) {
+      case 'required':
+        return '$label requis.';
+      case 'format':
+        return '$label invalide.';
+      default:
+        return null;
+    }
+  }
+
+  String? _fieldLabel(String field) {
+    switch (field) {
+      case 'phone':
+        return 'Telephone';
+      case 'password':
+        return 'Mot de passe';
+      case 'first_name':
+        return 'Prenom';
+      case 'last_name':
+        return 'Nom';
+      default:
+        return null;
+    }
   }
 
   String? _extractMessageFromRaw(String raw) {

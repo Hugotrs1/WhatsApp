@@ -6,13 +6,65 @@ $pdo = require __DIR__ . '/../config/database.php';
 
 require_once __DIR__ . '/../src/Auth/Jwt.php';
 
+function normalizePhone(string $phone): string {
+    $digits = preg_replace('/\D+/', '', $phone);
+    if ($digits === null) {
+        return '';
+    }
+    if (str_starts_with($digits, '0033')) {
+        $digits = substr($digits, 2);
+    }
+    if (str_starts_with($digits, '33')) {
+        $rest = substr($digits, 2);
+        if (strlen($rest) === 9) {
+            return '0' . $rest;
+        }
+        if (strlen($rest) === 10 && str_starts_with($rest, '0')) {
+            return $rest;
+        }
+    }
+    return $digits;
+}
+
+function readJsonBody(): ?array {
+    $raw = file_get_contents('php://input');
+    if ($raw === false) {
+        return null;
+    }
+    $trimmed = trim($raw);
+    if ($trimmed === '') {
+        return [];
+    }
+    $data = json_decode($raw, true);
+    if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+        return null;
+    }
+    return is_array($data) ? $data : [];
+}
+
+function sendJsonError(
+    int $status,
+    string $message,
+    string $code = '',
+    ?array $details = null
+): void {
+    http_response_code($status);
+    $payload = ['error' => $message];
+    if ($code !== '') {
+        $payload['code'] = $code;
+    }
+    if ($details !== null) {
+        $payload['details'] = $details;
+    }
+    echo json_encode($payload);
+    exit;
+}
+
 function authUserId(): int {
     $headers = getallheaders();
 
     if (empty($headers['Authorization'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Missing token']);
-        exit;
+        sendJsonError(401, 'Missing token', 'missing_token');
     }
 
     $token = str_replace('Bearer ', '', $headers['Authorization']);
@@ -21,9 +73,7 @@ function authUserId(): int {
         $payload = jwt_decode($token, getenv('JWT_SECRET'));
         return (int) $payload['sub'];
     } catch (Exception $e) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid token']);
-        exit;
+        sendJsonError(401, 'Invalid token', 'invalid_token');
     }
 }
 
@@ -40,32 +90,38 @@ if ($uri === '/api/health' && $method === 'GET') {
 }
 
 if ($uri === '/api/register' && $method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $data = readJsonBody();
+    if ($data === null) {
+        sendJsonError(400, 'Invalid JSON', 'invalid_json');
+    }
+    $phone = normalizePhone((string) ($data['phone'] ?? ''));
+    $errors = [];
 
-    if (
-        empty($data['first_name']) ||
-        empty($data['last_name']) ||
-        empty($data['phone']) ||
-        empty($data['password'])
-    ) {
-        http_response_code(422);
-        echo json_encode(['error' => 'Invalid payload']);
-        exit;
+    if (empty($data['first_name'])) {
+        $errors['first_name'] = 'required';
+    }
+    if (empty($data['last_name'])) {
+        $errors['last_name'] = 'required';
+    }
+    if ($phone === '') {
+        $errors['phone'] = 'required';
+    }
+    if (empty($data['password'])) {
+        $errors['password'] = 'required';
+    }
+    if (!empty($errors)) {
+        sendJsonError(422, 'Invalid payload', 'invalid_payload', $errors);
     }
 
-    if (!preg_match('/^[0-9]{10}$/', $data['phone'])) {
-        http_response_code(422);
-        echo json_encode(['error' => 'Invalid phone']);
-        exit;
+    if (!preg_match('/^[0-9]{10}$/', $phone)) {
+        sendJsonError(422, 'Invalid phone', 'invalid_phone', ['phone' => 'format']);
     }
 
     $stmt = $pdo->prepare('SELECT id FROM users WHERE phone = ?');
-    $stmt->execute([$data['phone']]);
+    $stmt->execute([$phone]);
 
     if ($stmt->fetch()) {
-        http_response_code(409);
-        echo json_encode(['error' => 'Phone already exists']);
-        exit;
+        sendJsonError(409, 'Phone already exists', 'phone_exists');
     }
 
     $stmt = $pdo->prepare(
@@ -77,13 +133,11 @@ if ($uri === '/api/register' && $method === 'POST') {
         $stmt->execute([
             $data['first_name'],
             $data['last_name'],
-            $data['phone'],
+            $phone,
             password_hash($data['password'], PASSWORD_BCRYPT)
         ]);
     } catch (PDOException $e) {
-        http_response_code(409);
-        echo json_encode(['error' => 'Phone already exists']);
-        exit;
+        sendJsonError(409, 'Phone already exists', 'phone_exists');
     }
 
     echo json_encode([
@@ -94,24 +148,35 @@ if ($uri === '/api/register' && $method === 'POST') {
 }
 
 if ($uri === '/api/login' && $method === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $data = readJsonBody();
+    if ($data === null) {
+        sendJsonError(400, 'Invalid JSON', 'invalid_json');
+    }
+    $phone = normalizePhone((string) ($data['phone'] ?? ''));
+    $errors = [];
 
-    if (empty($data['phone']) || empty($data['password'])) {
-        http_response_code(422);
-        echo json_encode(['error' => 'Invalid payload']);
-        exit;
+    if ($phone === '') {
+        $errors['phone'] = 'required';
+    }
+    if (empty($data['password'])) {
+        $errors['password'] = 'required';
+    }
+    if (!empty($errors)) {
+        sendJsonError(422, 'Invalid payload', 'invalid_payload', $errors);
+    }
+
+    if (!preg_match('/^[0-9]{10}$/', $phone)) {
+        sendJsonError(422, 'Invalid phone', 'invalid_phone', ['phone' => 'format']);
     }
 
     $stmt = $pdo->prepare(
         'SELECT id, password FROM users WHERE phone = ?'
     );
-    $stmt->execute([$data['phone']]);
+    $stmt->execute([$phone]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user || !password_verify($data['password'], $user['password'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Invalid credentials']);
-        exit;
+        sendJsonError(401, 'Invalid credentials', 'invalid_credentials');
     }
 
     $token = jwt_encode(
@@ -137,9 +202,12 @@ if ($uri === '/api/users/search' && $method === 'GET') {
     $userId = authUserId();
 
     if (empty($_GET['phone'])) {
-        http_response_code(422);
-        echo json_encode(['error' => 'Phone required']);
-        exit;
+        sendJsonError(422, 'Phone required', 'phone_required', ['phone' => 'required']);
+    }
+
+    $phone = normalizePhone((string) $_GET['phone']);
+    if (!preg_match('/^[0-9]{10}$/', $phone)) {
+        sendJsonError(422, 'Invalid phone', 'invalid_phone', ['phone' => 'format']);
     }
 
     $stmt = $pdo->prepare(
@@ -147,7 +215,7 @@ if ($uri === '/api/users/search' && $method === 'GET') {
          FROM users
          WHERE phone = ?'
     );
-    $stmt->execute([$_GET['phone']]);
+    $stmt->execute([$phone]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode($user ?: null);

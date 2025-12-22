@@ -1,3 +1,6 @@
+-- docker/db/01_init.sql
+USE whatsapp;
+
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -9,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     sender_id BIGINT UNSIGNED NOT NULL,
     receiver_id BIGINT UNSIGNED NOT NULL,
@@ -23,4 +26,4 @@ CREATE TABLE messages (
 
     CONSTRAINT fk_sender FOREIGN KEY (sender_id) REFERENCES users(id),
     CONSTRAINT fk_receiver FOREIGN KEY (receiver_id) REFERENCES users(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
