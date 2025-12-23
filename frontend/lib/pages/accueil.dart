@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
+import '../presentation/auth/authController.dart';
 import '../styles/styles.dart';
 import 'addContactPage.dart';
 import 'messagerie.dart';
 import 'settings.dart';
+import 'detailsUser.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -29,6 +31,22 @@ class _MainScaffoldState extends State<MainScaffold> {
     SettingsPage(),
   ];
   int _currentIndex = 0;
+  late final ApiService _apiService;
+  Map<String, dynamic>? _incomingRequest;
+  int _pendingCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService();
+    _loadIncomingRequests();
+  }
+
+  @override
+  void dispose() {
+    _apiService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +57,27 @@ class _MainScaffoldState extends State<MainScaffold> {
           IconButton(
             onPressed: _handleLogout,
             icon: const Icon(Icons.logout),
-            tooltip: 'Deconnexion',
+            tooltip: 'Déconnexion',
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Column(
+        children: [
+          if (_incomingRequest != null)
+            _IncomingRequestBanner(
+              request: _incomingRequest!,
+              pendingCount: _pendingCount,
+              onAccept: () => _acceptRequest(_incomingRequest!['id']),
+              onDecline: () => _declineRequest(_incomingRequest!['id']),
+              onView: () => _viewRequester(_incomingRequest!['requester_id']),
+            ),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _pages,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -62,7 +94,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           _buildAddItem(),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: 'Param\u00E8tres',
+            label: 'Paramètres',
           ),
         ],
       ),
@@ -76,7 +108,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 1:
         return 'Ajout de contact';
       case 2:
-        return 'Param\u00E8tres';
+        return 'Paramètres';
       default:
         return 'Messages';
     }
@@ -108,10 +140,134 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Future<void> _handleLogout() async {
-    await ApiService().clearConnectionStatus();
-    await ApiService().clearToken();
-    await ApiService().clearRememberedCredentials();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    await AuthScope.of(context).logout();
+  }
+
+  Future<void> _loadIncomingRequests() async {
+    try {
+      final response = await _apiService.listIncomingFriendRequests(status: 'PENDING');
+      if (response['ok'] != true) {
+        return;
+      }
+      final data = response['data'];
+      if (data is! List) {
+        return;
+      }
+      setState(() {
+        _pendingCount = data.length;
+        _incomingRequest = data.isNotEmpty ? Map<String, dynamic>.from(data.first) : null;
+      });
+    } catch (_) {
+      // silence polling errors
+    }
+  }
+
+  Future<void> _acceptRequest(dynamic requestId) async {
+    if (requestId == null) return;
+    final response = await _apiService.acceptFriendRequest(requestId: requestId.toString());
+    if (response['ok'] != true && mounted) {
+      _showBannerMessage(_apiService.readErrorMessage(response));
+    }
+    await _loadIncomingRequests();
+  }
+
+  Future<void> _declineRequest(dynamic requestId) async {
+    if (requestId == null) return;
+    final response = await _apiService.declineFriendRequest(requestId: requestId.toString());
+    if (response['ok'] != true && mounted) {
+      _showBannerMessage(_apiService.readErrorMessage(response));
+    }
+    await _loadIncomingRequests();
+  }
+
+  Future<void> _viewRequester(dynamic requesterId) async {
+    if (requesterId == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => UserDetailPage(userId: requesterId.toString())),
+    );
+    await _loadIncomingRequests();
+  }
+
+  void _showBannerMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+}
+
+class _IncomingRequestBanner extends StatelessWidget {
+  const _IncomingRequestBanner({
+    required this.request,
+    required this.pendingCount,
+    required this.onAccept,
+    required this.onDecline,
+    required this.onView,
+  });
+
+  final Map<String, dynamic> request;
+  final int pendingCount;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+  final VoidCallback onView;
+
+  @override
+  Widget build(BuildContext context) {
+    final requester = request['requester'] as Map<String, dynamic>?;
+    final name = _buildName(requester);
+    final extra = pendingCount > 1 ? ' (+${pendingCount - 1})' : '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        border: Border(
+          bottom: BorderSide(color: Colors.amber.shade200),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.person_add_alt_1, color: Colors.orange),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$name souhaite t\'ajouter$extra',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              TextButton(onPressed: onView, child: const Text('Voir')),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: onAccept,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                ),
+                child: const Text('Confirmer'),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: onDecline,
+                child: const Text('Décliner'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildName(Map<String, dynamic>? requester) {
+    final first = requester?['first_name']?.toString() ?? '';
+    final last = requester?['last_name']?.toString() ?? '';
+    final full = '$first $last'.trim();
+    return full.isEmpty ? 'Quelqu\'un' : full;
   }
 }

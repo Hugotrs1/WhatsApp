@@ -36,4 +36,20 @@ type        = VALUES(type),
 media_url   = VALUES(media_url),
 created_at  = VALUES(created_at);
 
+INSERT INTO friend_requests (id, requester_id, recipient_id, status, created_at, updated_at) VALUES
+(1, 2, 3, 'PENDING', NOW(), NULL)
+ON DUPLICATE KEY UPDATE
+requester_id = VALUES(requester_id),
+recipient_id = VALUES(recipient_id),
+status       = VALUES(status),
+created_at   = VALUES(created_at),
+updated_at   = VALUES(updated_at);
+
+INSERT INTO friendships (id, user_id_a, user_id_b, created_at) VALUES
+(1, 1, 2, NOW())
+ON DUPLICATE KEY UPDATE
+user_id_a = VALUES(user_id_a),
+user_id_b = VALUES(user_id_b),
+created_at = VALUES(created_at);
+
 COMMIT;

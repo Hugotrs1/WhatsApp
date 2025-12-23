@@ -3,27 +3,56 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../data/storage/stockageConfidentiel.dart';
+import '../data/storage/stockageSecurise.dart';
+import '../data/storage/stockageToken.dart';
+
+const int _jsonIsolateThreshold = 20000;
 
 class ApiService {
-  static const String _tokenKey = 'auth_token';
-  static const String _rememberPhoneKey = 'remember_phone';
-  static const String _rememberPasswordKey = 'remember_password';
+  factory ApiService({
+    String? baseUrl,
+    http.Client? client,
+    Duration? timeout,
+    SecureStorage? secureStorage,
+    TokenStorage? tokenStorage,
+    CredentialsStorage? credentialsStorage,
+  }) {
+    final resolvedStorage = secureStorage ?? SecureStorage();
+    return ApiService._internal(
+      baseUrl: baseUrl ?? _defaultBaseUrl(),
+      client: client ?? http.Client(),
+      timeout: timeout ?? const Duration(seconds: 15),
+      secureStorage: resolvedStorage,
+      tokenStorage: tokenStorage ?? TokenStorage(resolvedStorage),
+      credentialsStorage: credentialsStorage ?? CredentialsStorage(resolvedStorage),
+    );
+  }
+
+  ApiService._internal({
+    required this.baseUrl,
+    required http.Client client,
+    required Duration timeout,
+    required SecureStorage secureStorage,
+    required TokenStorage tokenStorage,
+    required CredentialsStorage credentialsStorage,
+  })  : _client = client,
+        _timeout = timeout,
+        _secureStorage = secureStorage,
+        _tokenStorage = tokenStorage,
+        _credentialsStorage = credentialsStorage;
+
   static const String _connectionStatusKey = 'est_connecte';
   static const String _genericErrorMessage =
       'Une erreur est survenue. Veuillez réessayer.';
 
-  ApiService({
-    String? baseUrl,
-    http.Client? client,
-    Duration? timeout,
-  })  : baseUrl = baseUrl ?? _defaultBaseUrl(),
-        _client = client ?? http.Client(),
-        _timeout = timeout ?? const Duration(seconds: 15);
-
   final String baseUrl;
   final http.Client _client;
   final Duration _timeout;
+  final SecureStorage _secureStorage;
+  final TokenStorage _tokenStorage;
+  final CredentialsStorage _credentialsStorage;
 
   static String _defaultBaseUrl() {
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -55,68 +84,63 @@ class ApiService {
   }
 
   Future<void> saveToken(String token) async {
-    await spSave<String>(_tokenKey, token);
+    await _tokenStorage.saveToken(token);
   }
 
-  Future<String?> getToken() async {
-    final token = await spGet<String>(_tokenKey);
-    if (token == null || token.isEmpty) return null;
-    if (_isTokenExpired(token)) {
-      final userId = _decodeUserId(token);
-      await spDelete(_tokenKey);
-      await spDelete(_connectionStatusKey);
-      if (userId != null) {
-        await spDelete('${_connectionStatusKey}_$userId');
-      }
-      return null;
-    }
-    return token;
+  Future<String?> getToken() {
+    return _tokenStorage.readToken();
+  }
+
+  Future<int?> getCurrentUserId() {
+    return _tokenStorage.readUserId();
   }
 
   Future<void> clearToken() async {
-    await spDelete(_tokenKey);
+    await _tokenStorage.clearToken();
   }
 
   Future<void> saveRememberedCredentials({
     required String phone,
     required String password,
   }) async {
-    await spSave<String>(_rememberPhoneKey, normalizePhone(phone));
-    await spDelete(_rememberPasswordKey);
+    await _credentialsStorage.save(
+      phone: normalizePhone(phone),
+      password: password,
+    );
   }
 
   Future<Map<String, String>?> getRememberedCredentials() async {
-    final phone = await spGet<String>(_rememberPhoneKey);
-    if (phone == null || phone.isEmpty) {
+    final remembered = await _credentialsStorage.read();
+    if (remembered == null) {
       return null;
     }
-    final legacyPassword = await spGet<String>(_rememberPasswordKey);
-    if (legacyPassword != null && legacyPassword.isNotEmpty) {
-      await spDelete(_rememberPasswordKey);
-    }
-    return {'phone': phone};
+    return {
+      'phone': remembered.phone,
+      'password': remembered.password,
+    };
   }
 
   Future<void> clearRememberedCredentials() async {
-    await spDelete(_rememberPhoneKey);
-    await spDelete(_rememberPasswordKey);
+    await _credentialsStorage.clear();
   }
 
   Future<void> saveConnectionStatus({required bool estConnecte}) async {
+    // Deprecated: kept for backward-compat. Remote status is handled via updateStatus.
     final key = await _connectionStatusKeyForUser();
-    await spSave<bool>(key, estConnecte);
+    await _secureStorage.writeBool(key, estConnecte);
   }
 
   Future<bool> getConnectionStatus() async {
+    // Deprecated: prefer getMyStatus.
     final key = await _connectionStatusKeyForUser();
-    return (await spGet<bool>(key)) ?? false;
+    return (await _secureStorage.readBool(key)) ?? false;
   }
 
   Future<void> clearConnectionStatus() async {
     final key = await _connectionStatusKeyForUser();
-    await spDelete(key);
+    await _secureStorage.delete(key);
     if (key != _connectionStatusKey) {
-      await spDelete(_connectionStatusKey);
+      await _secureStorage.delete(_connectionStatusKey);
     }
   }
 
@@ -129,43 +153,9 @@ class ApiService {
   }
 
   Future<String> _connectionStatusKeyForUser() async {
-    final token = await getToken();
-    final userId = _decodeUserId(token);
+    final userId = await _tokenStorage.readUserId();
     if (userId == null) return _connectionStatusKey;
     return '${_connectionStatusKey}_$userId';
-  }
-
-  int? _decodeUserId(String? token) {
-    if (token == null || token.isEmpty) return null;
-    final data = _decodeJwtPayload(token);
-    if (data == null) return null;
-    final sub = data['sub'];
-    if (sub is int) return sub;
-    if (sub is String) return int.tryParse(sub);
-    return null;
-  }
-
-  bool _isTokenExpired(String token) {
-    final data = _decodeJwtPayload(token);
-    if (data == null) return false;
-    final exp = data['exp'];
-    final expSeconds = exp is int ? exp : exp is String ? int.tryParse(exp) : null;
-    if (expSeconds == null) return false;
-    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    return nowSeconds >= expSeconds;
-  }
-
-  Map<String, dynamic>? _decodeJwtPayload(String token) {
-    final parts = token.split('.');
-    if (parts.length != 3) return null;
-    try {
-      final normalized = base64Url.normalize(parts[1]);
-      final payload = utf8.decode(base64Url.decode(normalized));
-      final data = jsonDecode(payload);
-      return data is Map<String, dynamic> ? data : null;
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>> login({
@@ -202,12 +192,94 @@ class ApiService {
     );
   }
 
-  Future<Map<String, dynamic>> getUsers() {
-    return _request('GET', '/users');
+  Future<Map<String, dynamic>> searchUsersByPhonePrefix({
+    required String phonePrefix,
+    int limit = 10,
+  }) {
+    return _request(
+      'GET',
+      '/api/users/search',
+      queryParameters: {
+        'phonePrefix': phonePrefix,
+        'limit': limit.toString(),
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> getUserProfile(String userId) {
+    return _request('GET', '/api/users/$userId');
+  }
+
+  Future<Map<String, dynamic>> createFriendRequest({required String recipientId}) {
+    return _request(
+      'POST',
+      '/api/friends/requests',
+      body: {'recipientId': recipientId},
+    );
+  }
+
+  Future<Map<String, dynamic>> acceptFriendRequest({required String requestId}) {
+    return _request('POST', '/api/friends/requests/$requestId/accept');
+  }
+
+  Future<Map<String, dynamic>> declineFriendRequest({required String requestId}) {
+    return _request('POST', '/api/friends/requests/$requestId/decline');
+  }
+
+  Future<Map<String, dynamic>> cancelFriendRequest({required String requestId}) {
+    return _request('POST', '/api/friends/requests/$requestId/cancel');
+  }
+
+  Future<Map<String, dynamic>> listIncomingFriendRequests({String status = 'PENDING'}) {
+    return _request(
+      'GET',
+      '/api/friends/requests/incoming',
+      queryParameters: {'status': status},
+    );
+  }
+
+  Future<Map<String, dynamic>> listFriends() {
+    return _request('GET', '/api/friends');
   }
 
   Future<Map<String, dynamic>> getConversations() {
     return _request('GET', '/api/conversations');
+  }
+
+  Future<Map<String, dynamic>> createDirectConversation({required String userId}) {
+    return _request(
+      'POST',
+      '/api/conversations/direct',
+      body: {'userId': userId},
+    );
+  }
+
+  Future<Map<String, dynamic>> hideConversation({required String userId}) {
+    return _request('POST', '/api/conversations/$userId/hide');
+  }
+
+  Future<Map<String, dynamic>> unhideConversation({required String userId}) {
+    return _request('POST', '/api/conversations/$userId/unhide');
+  }
+
+  Future<Map<String, dynamic>> updateStatus({required bool appearOffline}) {
+    return _request(
+      'POST',
+      '/api/status',
+      body: {'appear_offline': appearOffline},
+    );
+  }
+
+  Future<Map<String, dynamic>> getStatusForUser({required String userId}) {
+    return _request('GET', '/api/status/$userId');
+  }
+
+  Future<Map<String, dynamic>> getMyStatus() async {
+    final me = await _tokenStorage.readUserId();
+    if (me == null) {
+      return _error(status: 401, code: 'unauthorized', message: 'Non authentifié.');
+    }
+    return getStatusForUser(userId: me.toString());
   }
 
   Future<Map<String, dynamic>> getMessages({
@@ -270,56 +342,6 @@ class ApiService {
     return _request('GET', '/');
   }
 
-  Future<void> spSave<T>(String key, T value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (value is String) {
-      await prefs.setString(key, value);
-      return;
-    }
-    if (value is bool) {
-      await prefs.setBool(key, value);
-      return;
-    }
-    if (value is int) {
-      await prefs.setInt(key, value);
-      return;
-    }
-    if (value is double) {
-      await prefs.setDouble(key, value);
-      return;
-    }
-    if (value is List<String>) {
-      await prefs.setStringList(key, value);
-      return;
-    }
-    throw ArgumentError('Unsupported SharedPreferences type: ${value.runtimeType}');
-  }
-
-  Future<T?> spGet<T>(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (T == String) {
-      return prefs.getString(key) as T?;
-    }
-    if (T == bool) {
-      return prefs.getBool(key) as T?;
-    }
-    if (T == int) {
-      return prefs.getInt(key) as T?;
-    }
-    if (T == double) {
-      return prefs.getDouble(key) as T?;
-    }
-    if (T == List<String>) {
-      return prefs.getStringList(key) as T?;
-    }
-    throw ArgumentError('Unsupported SharedPreferences type: $T');
-  }
-
-  Future<void> spDelete(String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(key);
-  }
-
   void dispose() {
     _client.close();
   }
@@ -335,7 +357,7 @@ class ApiService {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
-    final token = await getToken();
+    final token = await _tokenStorage.readToken();
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
@@ -361,7 +383,15 @@ class ApiService {
           break;
       }
 
-      final parsed = _tryParseJson(response.body);
+      final parsed = await _tryParseJson(response.body);
+      if (parsed is Map && parsed.containsKey('ok')) {
+        if (response.statusCode == 401) {
+          await clearAuthState();
+        }
+        final normalized = Map<String, dynamic>.from(parsed);
+        normalized['status'] = response.statusCode;
+        return normalized;
+      }
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return _ok(status: response.statusCode, data: parsed);
       }
@@ -403,7 +433,7 @@ class ApiService {
     final uri = _buildUri(path, null);
     final request = http.MultipartRequest('POST', uri);
     request.headers['Accept'] = 'application/json';
-    final token = await getToken();
+    final token = await _tokenStorage.readToken();
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';
     }
@@ -413,7 +443,15 @@ class ApiService {
     try {
       final streamed = await request.send().timeout(_timeout);
       final body = await streamed.stream.bytesToString();
-      final parsed = _tryParseJson(body);
+      final parsed = await _tryParseJson(body);
+      if (parsed is Map && parsed.containsKey('ok')) {
+        if (streamed.statusCode == 401) {
+          await clearAuthState();
+        }
+        final normalized = Map<String, dynamic>.from(parsed);
+        normalized['status'] = streamed.statusCode;
+        return normalized;
+      }
       if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
         return _ok(status: streamed.statusCode, data: parsed);
       }
@@ -455,11 +493,14 @@ class ApiService {
     return resolved.replace(queryParameters: queryParameters);
   }
 
-  dynamic _tryParseJson(String body) {
+  Future<dynamic> _tryParseJson(String body) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) return null;
     try {
-      return jsonDecode(trimmed);
+      if (trimmed.length < _jsonIsolateThreshold) {
+        return jsonDecode(trimmed);
+      }
+      return await compute(_decodeJson, trimmed);
     } catch (_) {
       return {'raw': body};
     }
@@ -472,27 +513,52 @@ class ApiService {
     }
     switch (status) {
       case 400:
-        return 'Requete invalide.';
+        return 'Requête invalide.';
       case 401:
         return 'Authentification requise.';
       case 403:
-        return 'Acces refuse.';
+        return 'Accès refusé.';
       case 404:
         return 'Ressource introuvable.';
       case 408:
-        return 'Delai depasse. Reessaye.';
+        return 'Délai dépassé. Réessaie.';
       case 413:
-        return 'Fichier trop volumineux. Reduis la taille du fichier.';
+        return 'Fichier trop volumineux. Réduis la taille du fichier.';
       case 429:
-        return 'Trop de requetes. Reessaye plus tard.';
+        return 'Trop de requêtes. Réessaie plus tard.';
       case 500:
       case 502:
       case 503:
       case 504:
-        return 'Erreur serveur. Reessaye plus tard.';
+        return 'Erreur serveur. Réessaie plus tard.';
       default:
         return _genericErrorMessage;
     }
+  }
+
+  String readErrorMessage(Map<String, dynamic> response) {
+    final error = response['error'];
+    if (error is Map) {
+      final message = error['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+      final details = error['details'];
+      if (details is String && details.trim().isNotEmpty) {
+        return details.trim();
+      }
+      if (details is Map && details['message'] is String) {
+        final detailsMessage = details['message'] as String;
+        if (detailsMessage.trim().isNotEmpty) {
+          return detailsMessage.trim();
+        }
+      }
+      return _genericErrorMessage;
+    }
+    if (error is String && error.trim().isNotEmpty) {
+      return error.trim();
+    }
+    return _genericErrorMessage;
   }
 
   String? _extractMessage(dynamic details) {
@@ -555,11 +621,11 @@ class ApiService {
   String? _fieldLabel(String field) {
     switch (field) {
       case 'phone':
-        return 'Telephone';
+        return 'Téléphone';
       case 'password':
         return 'Mot de passe';
       case 'first_name':
-        return 'Prenom';
+        return 'Prénom';
       case 'last_name':
         return 'Nom';
       default:
@@ -573,7 +639,7 @@ class ApiService {
     final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (normalized.contains('413 Request Entity Too Large') ||
         normalized.contains('Request Entity Too Large')) {
-      return 'Fichier trop volumineux. Reduis la taille du fichier.';
+      return 'Fichier trop volumineux. Réduis la taille du fichier.';
     }
     if (RegExp(r'<[^>]+>').hasMatch(normalized)) {
       return null;
@@ -607,4 +673,8 @@ class ApiService {
       },
     };
   }
+}
+
+dynamic _decodeJson(String body) {
+  return jsonDecode(body);
 }

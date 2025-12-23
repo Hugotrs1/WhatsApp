@@ -371,11 +371,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   Future<void> _loadConnectionStatus() async {
-    final status = await _apiService.getConnectionStatus();
-    if (!mounted) return;
-    setState(() {
-      _estConnecte = status;
-    });
+    try {
+      final response = await _apiService.getStatusForUser(userId: widget.chat.id);
+      if (!mounted) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        final appearOffline = data is Map && data['appear_offline'] == true;
+        setState(() {
+          _estConnecte = !appearOffline;
+        });
+      }
+    } catch (_) {
+      // ignore errors for status
+    }
   }
 
   void _scrollToBottom() {
@@ -430,14 +438,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       await _sendImageMessage(image);
     } catch (error, stackTrace) {
       log(
-        'Erreur camera',
+        'Erreur caméra',
         error: error,
         stackTrace: stackTrace,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Une erreur est survenue. Veuillez reessayer.'),
+          content: Text('Une erreur est survenue. Veuillez réessayer.'),
         ),
       );
     }

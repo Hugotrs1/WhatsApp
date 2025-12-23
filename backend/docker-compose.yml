@@ -32,7 +32,9 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/db/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./docker/db/01b_friendships.sql:/docker-entrypoint-initdb.d/01b_friendships.sql:ro
       - ./docker/db/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+      - ./docker/db/03_status_conversation.sql:/docker-entrypoint-initdb.d/03_status_conversation.sql:ro
     networks:
       - whatsapp_net
 

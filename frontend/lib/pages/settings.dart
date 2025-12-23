@@ -16,6 +16,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final ApiService _apiService;
   bool _estConnecte = true;
   bool _isLoadingStatus = true;
+  String? _statusError;
 
   @override
   void initState() {
@@ -70,8 +71,8 @@ class _SettingsPageState extends State<SettingsPage> {
           activeColor: WhatsAppStyles.primaryColor,
           title: const Text('En ligne', style: TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(
-            _estConnecte ? 'Statut visible' : 'Statut masque',
-            style: const TextStyle(color: Colors.grey),
+            _statusError ?? (_estConnecte ? 'Statut visible' : 'Statut masqué'),
+            style: TextStyle(color: _statusError == null ? Colors.grey : Colors.red.shade700),
           ),
         ),
         Divider(height: 1, color: WhatsAppStyles.dividerColor),
@@ -95,19 +96,51 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadConnectionStatus() async {
-    final status = await _apiService.getConnectionStatus();
-    if (!mounted) return;
-    setState(() {
-      _estConnecte = status;
-      _isLoadingStatus = false;
-    });
+    try {
+      final response = await _apiService.getMyStatus();
+      if (!mounted) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        final appearOffline = data is Map && data['appear_offline'] == true;
+        setState(() {
+          _estConnecte = !appearOffline;
+          _isLoadingStatus = false;
+          _statusError = null;
+        });
+      } else {
+        setState(() {
+          _isLoadingStatus = false;
+          _statusError = _apiService.readErrorMessage(response);
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingStatus = false;
+        _statusError = 'Impossible de charger le statut';
+      });
+    }
   }
 
   Future<void> _toggleConnectionStatus(bool value) async {
     setState(() {
       _estConnecte = value;
+      _statusError = null;
+      _isLoadingStatus = true;
     });
-    await _apiService.saveConnectionStatus(estConnecte: value);
+    try {
+      final response = await _apiService.updateStatus(appearOffline: !value);
+      if (!mounted) return;
+      if (response['ok'] != true) {
+        setState(() {
+          _statusError = _apiService.readErrorMessage(response);
+        });
+      }
+    } finally {
+      if (mounted) {
+        _isLoadingStatus = false;
+      }
+    }
   }
 }
 
