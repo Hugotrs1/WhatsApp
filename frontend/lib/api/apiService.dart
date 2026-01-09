@@ -1,7 +1,9 @@
+// ignore_for_file: file_names
 import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../data/storage/stockageConfidentiel.dart';
@@ -55,10 +57,11 @@ class ApiService {
   final CredentialsStorage _credentialsStorage;
 
   static String _defaultBaseUrl() {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://172.20.10.2:8080';
+    final envBaseUrl = dotenv.env['API_BASE_URL']?.trim();
+    if (envBaseUrl != null && envBaseUrl.isNotEmpty) {
+      return envBaseUrl;
     }
-    return 'http://172.20.10.2:8080';
+    return 'http://localhost:8080';
   }
 
   static String normalizePhone(String value) {

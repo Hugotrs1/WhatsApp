@@ -1,3 +1,4 @@
+// ignore_for_file: file_names
 import 'package:whatsapp/data/storage/stockageSecurise.dart';
 
 import '../../domain/auth/authModele.dart';

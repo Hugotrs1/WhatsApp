@@ -181,14 +181,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming!['id'], true),
+                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming['id'], true),
                   child: const Text('Accepter'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming!['id'], false),
+                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming['id'], false),
                   child: const Text('Décliner'),
                 ),
               ),
@@ -199,7 +199,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isActionRunning ? null : () => _cancelRequest(outgoing!['id']),
+                  onPressed: _isActionRunning ? null : () => _cancelRequest(outgoing['id']),
                   child: const Text('Annuler la demande'),
                 ),
               ),

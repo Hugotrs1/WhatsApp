@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:whatsapp/data/storage/stockageSecurise.dart';
 
 import 'api/apiService.dart';
@@ -8,8 +9,13 @@ import 'domain/auth/authService.dart';
 import 'presentation/bootstrap/startup.dart';
 import 'styles/appTheme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (error) {
+    debugPrint('Optional .env not loaded: $error');
+  }
   final secureStorage = SecureStorage();
   final tokenStorage = TokenStorage(secureStorage);
   final credentialsStorage = CredentialsStorage(secureStorage);

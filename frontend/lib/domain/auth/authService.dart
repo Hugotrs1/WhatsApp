@@ -1,3 +1,4 @@
+// ignore_for_file: file_names
 import '../../api/apiService.dart';
 import '../../data/storage/stockageConfidentiel.dart';
 import '../../data/storage/stockageToken.dart';
