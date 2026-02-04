@@ -23,6 +23,7 @@ class _ChatsPageState extends State<ChatsPage> {
 
   late final ApiService _apiService;
   final List<Chat> _chats = [];
+  final List<Map<String, dynamic>> _friends = [];
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
   int _searchToken = 0;
@@ -31,8 +32,10 @@ class _ChatsPageState extends State<ChatsPage> {
   bool _isLoading = true;
   bool _isFetching = false;
   bool _isSearching = false;
+  bool _isFriendsLoading = false;
   String? _loadError;
   String? _searchError;
+  String? _friendsError;
   bool _isHiding = false;
 
   @override
@@ -41,6 +44,7 @@ class _ChatsPageState extends State<ChatsPage> {
     _apiService = ApiService();
     _searchController.addListener(_onQueryChanged);
     _loadConversations();
+    _loadFriends();
   }
 
   @override
@@ -67,7 +71,7 @@ class _ChatsPageState extends State<ChatsPage> {
           child: TextField(
             controller: _searchController,
             decoration: WhatsAppStyles.searchFieldDecoration(
-              hintText: 'Rechercher ou démarrer une discussion',
+              hintText: 'Rechercher un ami',
             ),
             onChanged: (_) => _onQueryChanged(),
           ),
@@ -156,6 +160,9 @@ class _ChatsPageState extends State<ChatsPage> {
     if (_isSearching) {
       items.add(const LinearProgressIndicator());
     }
+    if (_isFriendsLoading) {
+      items.add(const LinearProgressIndicator());
+    }
     if (_searchError != null) {
       items.add(
         Padding(
@@ -167,12 +174,23 @@ class _ChatsPageState extends State<ChatsPage> {
         ),
       );
     }
-    if (_suggestions.isEmpty && !_isSearching && _searchError == null) {
+    if (_friendsError != null) {
+      items.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            _friendsError!,
+            style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w700),
+          ),
+        ),
+      );
+    }
+    if (_suggestions.isEmpty && !_isSearching && !_isFriendsLoading && _searchError == null && _friendsError == null) {
       items.add(
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
-            'Aucun utilisateur trouvé. Invite ton ami ou vérifie le numéro.',
+            'Aucun ami trouvé.',
             style: WhatsAppStyles.mutedBodyStyle(context),
           ),
         ),
@@ -189,7 +207,7 @@ class _ChatsPageState extends State<ChatsPage> {
             ),
           ),
           title: Text(_suggestionName(s)),
-          subtitle: Text(s['phone_masked']?.toString() ?? ''),
+          subtitle: Text(s['phone']?.toString() ?? s['phone_masked']?.toString() ?? ''),
           trailing: const Icon(Icons.chat_outlined),
           onTap: () => _openSuggestion(s),
         ),
@@ -204,7 +222,7 @@ class _ChatsPageState extends State<ChatsPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
-              'Suggestions',
+              'Amis',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
@@ -224,6 +242,7 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<void> _refreshConversations() async {
     await _loadConversations(reset: true);
+    await _loadFriends();
   }
 
   Future<void> _loadConversations({bool reset = false}) async {
@@ -289,58 +308,29 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   Future<void> _performSearch() async {
-    final digits = _query.trim().replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 2) {
-      return;
-    }
+    final query = _query.trim();
+    if (query.isEmpty) return;
     final token = ++_searchToken;
     setState(() {
       _isSearching = true;
       _searchError = null;
     });
-    try {
-      final response = await _apiService.searchUsersByPhonePrefix(
-        phonePrefix: digits,
-        limit: 10,
-      );
-      if (!mounted || token != _searchToken) return;
-      if (response['ok'] == true) {
-        final data = response['data'];
-        final list = <Map<String, dynamic>>[];
-        if (data is List) {
-          for (final item in data) {
-            if (item is Map) {
-              list.add(Map<String, dynamic>.from(item));
-            }
-          }
-        }
-        setState(() {
-          _suggestions = list;
-          _isSearching = false;
-        });
-      } else {
-        setState(() {
-          _isSearching = false;
-          _searchError = _readErrorMessage(response);
-        });
-      }
-    } catch (error, stackTrace) {
-      log(
-        'Erreur recherche utilisateur',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted || token != _searchToken) return;
-      setState(() {
-        _isSearching = false;
-        _searchError = _genericErrorMessage;
-      });
-    }
+    final suggestions = _filterFriends(query);
+    if (!mounted || token != _searchToken) return;
+    setState(() {
+      _suggestions = suggestions;
+      _isSearching = false;
+    });
   }
 
   Future<void> _openSuggestion(Map<String, dynamic> suggestion) async {
     final userId = suggestion['id']?.toString();
     if (userId == null || userId.isEmpty) return;
+    final existingChat = _findChatByUserId(userId);
+    if (existingChat != null) {
+      _openChat(existingChat);
+      return;
+    }
     final response = await _apiService.createDirectConversation(userId: userId);
     if (!mounted) return;
     if (response['ok'] != true) {
@@ -475,6 +465,72 @@ class _ChatsPageState extends State<ChatsPage> {
   String _suggestionInitials(Map item) {
     final name = _suggestionName(item);
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
+  List<Map<String, dynamic>> _filterFriends(String query) {
+    final q = query.toLowerCase();
+    final digits = query.replaceAll(RegExp(r'\D'), '');
+    return _friends.where((friend) {
+      final name = _suggestionName(friend).toLowerCase();
+      final phone = friend['phone']?.toString().toLowerCase() ??
+          friend['phone_masked']?.toString().toLowerCase() ??
+          '';
+      final matchName = name.contains(q);
+      final matchPhone =
+          digits.isNotEmpty && phone.replaceAll(RegExp(r'\D'), '').contains(digits);
+      return matchName || matchPhone;
+    }).toList();
+  }
+
+  Chat? _findChatByUserId(String userId) {
+    for (final chat in _chats) {
+      if (chat.id == userId) return chat;
+    }
+    return null;
+  }
+
+  Future<void> _loadFriends() async {
+    if (_isFriendsLoading) return;
+    setState(() {
+      _isFriendsLoading = true;
+      _friendsError = null;
+    });
+    try {
+      final response = await _apiService.listFriends();
+      if (!mounted) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        final list = <Map<String, dynamic>>[];
+        if (data is List) {
+          for (final item in data) {
+            if (item is Map) {
+              list.add(Map<String, dynamic>.from(item));
+            }
+          }
+        }
+        setState(() {
+          _friends
+            ..clear()
+            ..addAll(list);
+          _isFriendsLoading = false;
+          if (_query.trim().isNotEmpty) {
+            _suggestions = _filterFriends(_query.trim());
+          }
+        });
+      } else {
+        setState(() {
+          _isFriendsLoading = false;
+          _friendsError = _readErrorMessage(response);
+        });
+      }
+    } catch (error, stackTrace) {
+      log('Erreur chargement amis', error: error, stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() {
+        _isFriendsLoading = false;
+        _friendsError = _genericErrorMessage;
+      });
+    }
   }
 
   DateTime _parseMessageTime(dynamic value) {

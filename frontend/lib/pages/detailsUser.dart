@@ -69,7 +69,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }) {
     final firstName = _profile?['first_name']?.toString() ?? '';
     final lastName = _profile?['last_name']?.toString() ?? '';
-    final phoneMasked = _profile?['phone_masked']?.toString() ?? '';
+    final phoneMasked = _profile?['phone']?.toString() ?? _profile?['phone_masked']?.toString() ?? '';
     final fullName = '$firstName $lastName'.trim();
 
     return ListView(
@@ -211,12 +211,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
             icon: const Icon(Icons.person_add_alt_1),
             label: const Text('Ajouter en ami'),
           ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: _isActionRunning ? null : _openChat,
-          icon: const Icon(Icons.chat_outlined),
-          label: const Text('Démarrer une discussion'),
-        ),
       ],
     );
   }

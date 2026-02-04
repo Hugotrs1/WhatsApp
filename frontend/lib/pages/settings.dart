@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
 import '../styles/styles.dart';
-import '../utils/mock_data.dart';
 import '../widget/avatar.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -17,12 +16,15 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _estConnecte = true;
   bool _isLoadingStatus = true;
   String? _statusError;
+  String? _displayName;
+  String? _phoneMasked;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
     _loadConnectionStatus();
+    _loadProfile();
   }
 
   @override
@@ -33,7 +35,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final me = statusUpdates.first;
+    final displayName =
+        _displayName?.trim().isNotEmpty == true ? _displayName!.trim() : 'Utilisateur';
+    final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    final phone = _phoneMasked ?? '';
 
     return ListView(
       children: [
@@ -43,18 +48,24 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Row(
             children: [
               Avatar(
-                initials: me.initials,
-                imageUrl: me.avatarUrl,
+                initials: initials,
+                imageUrl: null,
                 radius: 30,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Moi', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    SizedBox(height: 4),
-                    Text('+33 6 12 34 56 78', style: TextStyle(color: Colors.grey)),
+                  children: [
+                    Text(
+                      displayName,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      phone,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
                   ],
                 ),
               ),
@@ -119,6 +130,37 @@ class _SettingsPageState extends State<SettingsPage> {
         _isLoadingStatus = false;
         _statusError = 'Impossible de charger le statut';
       });
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final userId = await _apiService.getCurrentUserId();
+      if (userId == null) {
+        if (!mounted) return;
+        setState(() {
+          _displayName = 'Utilisateur';
+          _phoneMasked = '';
+        });
+        return;
+      }
+      final response = await _apiService.getUserProfile(userId.toString());
+      if (!mounted) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        if (data is Map) {
+          final firstName = data['first_name']?.toString() ?? '';
+          final lastName = data['last_name']?.toString() ?? '';
+          final fullName = '$firstName $lastName'.trim();
+          setState(() {
+            _displayName = fullName.isEmpty ? 'Utilisateur' : fullName;
+            _phoneMasked = data['phone']?.toString() ?? data['phone_masked']?.toString() ?? '';
+          });
+          return;
+        }
+      }
+    } catch (_) {
+      if (!mounted) return;
     }
   }
 

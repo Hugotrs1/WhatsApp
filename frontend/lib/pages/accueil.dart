@@ -129,7 +129,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha : 0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -249,12 +249,14 @@ class _IncomingRequestBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton(
                 onPressed: onAccept,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade600,
                   foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 40),
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 ),
                 child: const Text('Confirmer'),

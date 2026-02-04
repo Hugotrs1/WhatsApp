@@ -106,7 +106,7 @@ class _AddContactPageState extends State<AddContactPage> {
                 ),
               ),
               title: Text(_displayName(item)),
-              subtitle: Text(item['phone_masked']?.toString() ?? ''),
+              subtitle: Text(item['phone']?.toString() ?? item['phone_masked']?.toString() ?? ''),
               trailing: _buildStatusChip(item),
               onTap: () => _openUserDetail(item['id'].toString()),
             ),
