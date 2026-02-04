@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
+import '../utils/notificationSound.dart';
 import '../widget/avatar.dart';
 import '../widget/messageView.dart';
 
@@ -45,6 +46,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   int _lastMessageId = 0;
   Timer? _pollingTimer;
   Timer? _typingDebounce;
+  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
@@ -53,7 +55,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _controller.addListener(_onTypingChanged);
     _loadConnectionStatus();
     _loadMessages(reset: true);
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollUpdates());
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 400), (_) => _pollUpdates());
   }
 
   @override
@@ -346,6 +348,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final data = response['data'];
         final parsed = _parseMessages(data, _currentUserId);
         final newLastId = _maxMessageId(data);
+        final hasIncoming = !reset && _hasLoadedOnce && _hasIncomingMessages(parsed);
         setState(() {
           _loadError = null;
           if (reset) {
@@ -360,6 +363,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
           _isLoading = false;
         });
+        if (hasIncoming) {
+          NotificationSound.playFart();
+        }
+        _hasLoadedOnce = true;
         if (parsed.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
         }
@@ -600,6 +607,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       if (parsed != null) return parsed;
     }
     return DateTime.now();
+  }
+
+  bool _hasIncomingMessages(List<ChatMessage> messages) {
+    for (final message in messages) {
+      if (!message.isMine) return true;
+    }
+    return false;
   }
 
   DateTime? _parseDate(String? value) {

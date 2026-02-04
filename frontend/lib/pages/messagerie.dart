@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
+import '../utils/notificationSound.dart';
 import '../widget/chatListTile.dart';
 import 'chatDetail.dart';
 
@@ -27,6 +28,8 @@ class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
   Timer? _pollingTimer;
+  final Map<String, int> _lastMessageIdByChat = {};
+  bool _hasLoadedOnce = false;
   int _searchToken = 0;
   List<Map<String, dynamic>> _suggestions = [];
   String _query = '';
@@ -38,6 +41,7 @@ class _ChatsPageState extends State<ChatsPage> {
   String? _searchError;
   String? _friendsError;
   bool _isHiding = false;
+  int? _currentUserId;
 
   @override
   void initState() {
@@ -260,11 +264,13 @@ class _ChatsPageState extends State<ChatsPage> {
         });
       }
 
+      _currentUserId ??= await _apiService.getCurrentUserId();
       final response = await _apiService.getConversations();
       if (!mounted) return;
 
       if (response['ok'] == true) {
         final data = response['data'];
+        final shouldNotify = _shouldNotifyForNewMessages(data, notify: _hasLoadedOnce);
         final parsed = _parseConversations(data);
         setState(() {
           _chats
@@ -273,6 +279,10 @@ class _ChatsPageState extends State<ChatsPage> {
           _isLoading = false;
           _loadError = null;
         });
+        if (shouldNotify) {
+          NotificationSound.playFart();
+        }
+        _hasLoadedOnce = true;
       } else {
         setState(() {
           _isLoading = false;
@@ -293,6 +303,30 @@ class _ChatsPageState extends State<ChatsPage> {
     } finally {
       _isFetching = false;
     }
+  }
+
+  bool _shouldNotifyForNewMessages(dynamic data, {required bool notify}) {
+    if (data is! List) return false;
+    if (_currentUserId == null) return false;
+    var shouldNotify = false;
+    for (final item in data) {
+      if (item is! Map) continue;
+      final id = item['user_id']?.toString() ?? item['id']?.toString();
+      if (id == null || id.isEmpty) continue;
+      final messageId = item['message_id'] is int
+          ? item['message_id'] as int
+          : int.tryParse(item['message_id']?.toString() ?? '') ?? 0;
+      final prev = _lastMessageIdByChat[id] ?? 0;
+      _lastMessageIdByChat[id] = messageId;
+      if (messageId <= prev) continue;
+      final senderId = item['sender_id'] is int
+          ? item['sender_id'] as int
+          : int.tryParse(item['sender_id']?.toString() ?? '') ?? 0;
+      if (notify && senderId != _currentUserId && senderId > 0) {
+        shouldNotify = true;
+      }
+    }
+    return shouldNotify;
   }
 
   Future<void> _pollConversations() async {
