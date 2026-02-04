@@ -1,4 +1,5 @@
 // ignore_for_file: file_names
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -39,6 +40,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   String? _loadError;
   int? _currentUserId;
   int _lastMessageId = 0;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
@@ -46,10 +48,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _apiService = ApiService();
     _loadConnectionStatus();
     _loadMessages(reset: true);
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _loadMessages());
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();

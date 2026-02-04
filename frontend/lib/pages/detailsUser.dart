@@ -265,6 +265,23 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }
 
   Future<void> _sendFriendRequest() async {
+    final relation = _profile?['relation'] as Map<String, dynamic>?;
+    final isFriend = relation?['is_friend'] == true;
+    final incoming = relation?['incoming_request'] as Map<String, dynamic>?;
+    final outgoing = relation?['outgoing_request'] as Map<String, dynamic>?;
+    if (isFriend) {
+      _showSnackBar('Vous êtes déjà amis.');
+      return;
+    }
+    if (outgoing != null && outgoing['status'] == 'PENDING') {
+      _showSnackBar('Demande déjà envoyée.');
+      return;
+    }
+    if (incoming != null && incoming['status'] == 'PENDING') {
+      _showSnackBar('Cette personne vous a déjà envoyé une demande.');
+      return;
+    }
+
     setState(() => _isActionRunning = true);
     try {
       final response = await _apiService.createFriendRequest(recipientId: widget.userId);

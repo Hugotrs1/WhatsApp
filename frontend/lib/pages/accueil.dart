@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
@@ -34,16 +36,20 @@ class _MainScaffoldState extends State<MainScaffold> {
   late final ApiService _apiService;
   Map<String, dynamic>? _incomingRequest;
   int _pendingCount = 0;
+  Timer? _incomingRequestsTimer;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
     _loadIncomingRequests();
+    _incomingRequestsTimer =
+        Timer.periodic(const Duration(seconds: 25), (_) => _loadIncomingRequests());
   }
 
   @override
   void dispose() {
+    _incomingRequestsTimer?.cancel();
     _apiService.dispose();
     super.dispose();
   }
@@ -153,6 +159,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       if (data is! List) {
         return;
       }
+      if (!mounted) return;
       setState(() {
         _pendingCount = data.length;
         _incomingRequest = data.isNotEmpty ? Map<String, dynamic>.from(data.first) : null;

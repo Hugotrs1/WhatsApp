@@ -61,3 +61,8 @@ Ecrans clefs :
 - Si vous changez le port/API, mettez a jour la base URL dans le frontend.
 - Les tokens expirent au bout d-1h (`exp` dans JWT).
 - Les conversations cachees restent en base (`conversation_user.hidden_at`) mais sont filtrees cote service.
+
+## A ameliorer cote backend
+- Ajouter une contrainte unique sur `(requester_id, recipient_id)` ou un index partiel PENDING pour blinder les doublons (le service bloque deja les demandes en double).
+- Si besoin, invalider les sessions precedentes du meme compte au login (revocation JWT ou rotation/blacklist).
+- Websocket/temps reel : exposer un flux (WebSocket/SSE) pour pousser nouveaux messages et demandes d-amis; le frontend poll actuellement.
