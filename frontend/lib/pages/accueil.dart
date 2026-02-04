@@ -44,7 +44,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     _apiService = ApiService();
     _loadIncomingRequests();
     _incomingRequestsTimer =
-        Timer.periodic(const Duration(seconds: 25), (_) => _loadIncomingRequests());
+        Timer.periodic(const Duration(seconds: 2), (_) => _loadIncomingRequests());
   }
 
   @override

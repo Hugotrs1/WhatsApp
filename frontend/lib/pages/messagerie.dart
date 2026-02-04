@@ -26,6 +26,7 @@ class _ChatsPageState extends State<ChatsPage> {
   final List<Map<String, dynamic>> _friends = [];
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
+  Timer? _pollingTimer;
   int _searchToken = 0;
   List<Map<String, dynamic>> _suggestions = [];
   String _query = '';
@@ -45,11 +46,13 @@ class _ChatsPageState extends State<ChatsPage> {
     _searchController.addListener(_onQueryChanged);
     _loadConversations();
     _loadFriends();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollConversations());
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _pollingTimer?.cancel();
     _searchController.removeListener(_onQueryChanged);
     _searchController.dispose();
     _apiService.dispose();
@@ -292,6 +295,11 @@ class _ChatsPageState extends State<ChatsPage> {
     }
   }
 
+  Future<void> _pollConversations() async {
+    if (!mounted) return;
+    await _loadConversations();
+  }
+
   void _onQueryChanged() {
     setState(() {
       _query = _searchController.text;
@@ -403,6 +411,9 @@ class _ChatsPageState extends State<ChatsPage> {
       final lastMessage = typeValue == 'image'
           ? (trimmedContent.isEmpty ? 'Photo' : 'Photo - $trimmedContent')
           : (trimmedContent.isEmpty ? 'Aucun message' : trimmedContent);
+      final unreadCount = item['unread_count'] is int
+          ? item['unread_count'] as int
+          : int.tryParse(item['unread_count']?.toString() ?? '') ?? 0;
       chats.add(
         Chat(
           id: id,
@@ -410,7 +421,7 @@ class _ChatsPageState extends State<ChatsPage> {
           lastMessage: lastMessage,
           lastActivity: _parseMessageTime(item['created_at']),
           messages: const [],
-          unreadCount: 0,
+          unreadCount: unreadCount,
           isMuted: false,
           isPinned: false,
           isGroup: false,

@@ -37,23 +37,31 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isFetching = false;
   bool _isSending = false;
   bool _estConnecte = false;
+  bool _isTypingRemote = false;
+  bool _isTypingSelf = false;
+  DateTime? _lastSeen;
   String? _loadError;
   int? _currentUserId;
   int _lastMessageId = 0;
   Timer? _pollingTimer;
+  Timer? _typingDebounce;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
+    _controller.addListener(_onTypingChanged);
     _loadConnectionStatus();
     _loadMessages(reset: true);
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _loadMessages());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollUpdates());
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _typingDebounce?.cancel();
+    _setTyping(false);
+    _controller.removeListener(_onTypingChanged);
     _controller.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
@@ -82,7 +90,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 children: [
                   Text(widget.chat.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                   Text(
-                    _estConnecte ? 'En ligne' : 'Hors ligne',
+                    _statusLabel(),
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade300),
                   ),
                 ],
@@ -234,6 +242,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _showMessageError("Merci d'ecrire un message.");
       return;
     }
+    _setTyping(false);
     _controller.clear();
     setState(() {
       _isSending = true;
@@ -272,6 +281,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> _sendImageMessage(XFile image) async {
     if (_isSending) return;
     final caption = _controller.text.trim();
+    _setTyping(false);
     _controller.clear();
     setState(() {
       _isSending = true;
@@ -375,6 +385,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  Future<void> _pollUpdates() async {
+    await _loadMessages();
+    await _loadConnectionStatus();
+    await _loadTypingStatus();
+  }
+
   Future<void> _loadConnectionStatus() async {
     try {
       final response = await _apiService.getStatusForUser(userId: widget.chat.id);
@@ -382,12 +398,33 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       if (response['ok'] == true) {
         final data = response['data'];
         final appearOffline = data is Map && data['appear_offline'] == true;
+        final lastSeenRaw = data is Map ? data['last_seen']?.toString() : null;
+        final lastSeen = _parseDate(lastSeenRaw);
         setState(() {
           _estConnecte = !appearOffline;
+          _lastSeen = lastSeen;
         });
       }
     } catch (_) {
       // ignore errors for status
+    }
+  }
+
+  Future<void> _loadTypingStatus() async {
+    try {
+      final response = await _apiService.getTypingStatus(userId: widget.chat.id);
+      if (!mounted) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        final isTyping = data is Map && data['is_typing'] == true;
+        if (isTyping != _isTypingRemote) {
+          setState(() {
+            _isTypingRemote = isTyping;
+          });
+        }
+      }
+    } catch (_) {
+      // ignore errors for typing
     }
   }
 
@@ -416,6 +453,30 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     setState(() {
       _showEmojiPicker = false;
     });
+  }
+
+  void _onTypingChanged() {
+    final hasText = _controller.text.trim().isNotEmpty;
+    if (hasText) {
+      _setTyping(true);
+      _typingDebounce?.cancel();
+      _typingDebounce = Timer(const Duration(seconds: 2), () {
+        _setTyping(false);
+      });
+    } else {
+      _typingDebounce?.cancel();
+      _setTyping(false);
+    }
+  }
+
+  Future<void> _setTyping(bool isTyping) async {
+    if (_isTypingSelf == isTyping) return;
+    _isTypingSelf = isTyping;
+    try {
+      await _apiService.setTyping(userId: widget.chat.id, isTyping: isTyping);
+    } catch (_) {
+      // ignore typing errors
+    }
   }
 
   Future<void> _pickAttachment() async {
@@ -539,6 +600,38 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       if (parsed != null) return parsed;
     }
     return DateTime.now();
+  }
+
+  DateTime? _parseDate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
+    return DateTime.tryParse(normalized);
+  }
+
+  String _statusLabel() {
+    if (_isTypingRemote) {
+      return 'écrit...';
+    }
+    if (_estConnecte) {
+      return 'En ligne';
+    }
+    if (_lastSeen != null) {
+      return _formatLastSeen(_lastSeen!);
+    }
+    return 'Hors ligne';
+  }
+
+  String _formatLastSeen(DateTime value) {
+    final now = DateTime.now();
+    final isSameDay = now.year == value.year && now.month == value.month && now.day == value.day;
+    if (isSameDay) {
+      final hh = value.hour.toString().padLeft(2, '0');
+      final mm = value.minute.toString().padLeft(2, '0');
+      return 'Vu à $hh:$mm';
+    }
+    final dd = value.day.toString().padLeft(2, '0');
+    final mm = value.month.toString().padLeft(2, '0');
+    return 'Vu le $dd/$mm';
   }
 
   String? _resolveMediaUrl(String? mediaUrl) {

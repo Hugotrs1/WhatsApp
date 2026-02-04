@@ -277,6 +277,21 @@ class ApiService {
     return _request('GET', '/api/status/$userId');
   }
 
+  Future<Map<String, dynamic>> setTyping({
+    required String userId,
+    required bool isTyping,
+  }) {
+    return _request(
+      'POST',
+      '/api/conversations/$userId/typing',
+      body: {'is_typing': isTyping},
+    );
+  }
+
+  Future<Map<String, dynamic>> getTypingStatus({required String userId}) {
+    return _request('GET', '/api/conversations/$userId/typing');
+  }
+
   Future<Map<String, dynamic>> getMyStatus() async {
     final me = await _tokenStorage.readUserId();
     if (me == null) {
