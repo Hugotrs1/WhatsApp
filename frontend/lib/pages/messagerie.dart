@@ -280,7 +280,7 @@ class _ChatsPageState extends State<ChatsPage> {
           _loadError = null;
         });
         if (shouldNotify) {
-          NotificationSound.playFart();
+          NotificationSound.playNotification();
         }
         _hasLoadedOnce = true;
       } else {

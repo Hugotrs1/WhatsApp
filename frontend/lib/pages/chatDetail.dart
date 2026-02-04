@@ -364,7 +364,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           _isLoading = false;
         });
         if (hasIncoming) {
-          NotificationSound.playFart();
+          NotificationSound.playNotification();
         }
         _hasLoadedOnce = true;
         if (parsed.isNotEmpty) {

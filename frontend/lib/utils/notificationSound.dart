@@ -6,7 +6,7 @@ class NotificationSound {
   static final AudioPlayer _player = AudioPlayer();
   static DateTime? _lastPlayedAt;
 
-  static Future<void> playFart() async {
+  static Future<void> playNotification() async {
     final now = DateTime.now();
     if (_lastPlayedAt != null &&
         now.difference(_lastPlayedAt!).inMilliseconds < 800) {
@@ -14,7 +14,7 @@ class NotificationSound {
     }
     _lastPlayedAt = now;
     await _player.play(
-      AssetSource('audio/dry-fart.mp3'),
+      AssetSource('audio/samsung.mp3'),
       volume: 0.8,
     );
   }
