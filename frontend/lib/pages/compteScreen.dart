@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
+import '../models/profileUser.dart';
 import '../styles/styles.dart';
 import '../widget/avatar.dart';
 
@@ -35,8 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName =
-        _displayName?.trim().isNotEmpty == true ? _displayName!.trim() : 'Utilisateur';
+    final displayName = _displayName?.trim().isNotEmpty == true ? _displayName!.trim() : 'Utilisateur';
     final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
     final phone = _phoneMasked ?? '';
 
@@ -69,8 +69,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
               ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.qr_code)),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.edit)),
             ],
           ),
         ),
@@ -79,7 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           value: _estConnecte,
           onChanged: _isLoadingStatus ? null : _toggleConnectionStatus,
-          activeColor: WhatsAppStyles.primaryColor,
+          activeThumbColor: WhatsAppStyles.primaryColor,
           title: const Text('En ligne', style: TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(
             _statusError ?? (_estConnecte ? 'Statut visible' : 'Statut masqué'),
@@ -87,17 +85,11 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         Divider(height: 1, color: WhatsAppStyles.dividerColor),
-        _SettingsTile(icon: Icons.vpn_key, title: 'Compte', subtitle: 'Confidentialité, sécurité, changer de numéro'),
-        _SettingsTile(icon: Icons.lock_outline, title: 'Confidentialité', subtitle: 'Verrouillage par empreinte, contacts bloqués'),
-        _SettingsTile(icon: Icons.chat_bubble_outline, title: 'Discussions', subtitle: 'Thèmes, fonds d’écran, historique'),
-        _SettingsTile(icon: Icons.notifications_none, title: 'Notifications', subtitle: 'Sons de message, groupes, appels'),
-        _SettingsTile(icon: Icons.data_saver_off, title: 'Stockage et données', subtitle: 'Utilisation réseau, téléchargement auto'),
-        _SettingsTile(icon: Icons.help_outline, title: 'Aide', subtitle: 'Centre d’aide, contact'),
-        
+       
         const SizedBox(height: 24),
         Center(
           child: Text(
-            'Meta • 2025',
+            'CESI • 2026',
             style: TextStyle(color: Colors.grey.shade600),
           ),
         ),
@@ -149,12 +141,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (response['ok'] == true) {
         final data = response['data'];
         if (data is Map) {
-          final firstName = data['first_name']?.toString() ?? '';
-          final lastName = data['last_name']?.toString() ?? '';
-          final fullName = '$firstName $lastName'.trim();
+          final profile = UserProfile.fromMap(Map<String, dynamic>.from(data));
           setState(() {
-            _displayName = fullName.isEmpty ? 'Utilisateur' : fullName;
-            _phoneMasked = data['phone']?.toString() ?? data['phone_masked']?.toString() ?? '';
+            _displayName = profile.displayName;
+            _phoneMasked = profile.displayPhone;
           });
           return;
         }
@@ -183,36 +173,5 @@ class _SettingsPageState extends State<SettingsPage> {
         _isLoadingStatus = false;
       }
     }
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: CircleAvatar(
-            backgroundColor: WhatsAppStyles.primaryColor.withValues(alpha: 0.08),
-            child: Icon(icon, color: WhatsAppStyles.primaryColor),
-          ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {},
-        ),
-        Divider(height: 1, color: WhatsAppStyles.dividerColor),
-      ],
-    );
   }
 }

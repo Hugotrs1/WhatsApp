@@ -4,8 +4,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
+import '../models/userSummary.dart';
 import '../styles/styles.dart';
-import 'detailsUser.dart';
+import '../utils/utils.dart';
+import 'detailsUserScreen.dart';
 
 class AddContactPage extends StatefulWidget {
   const AddContactPage({super.key});
@@ -24,7 +26,7 @@ class _AddContactPageState extends State<AddContactPage> {
   bool _isLoading = false;
   String? _error;
   int _searchToken = 0;
-  List<Map<String, dynamic>> _results = [];
+  List<UserSummary> _results = [];
 
   @override
   void initState() {
@@ -101,34 +103,22 @@ class _AddContactPageState extends State<AddContactPage> {
               leading: CircleAvatar(
                 backgroundColor: WhatsAppStyles.primaryColor.withOpacity(0.12),
                 child: Text(
-                  _initials(item),
+                  item.initials,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              title: Text(_displayName(item)),
-              subtitle: Text(item['phone']?.toString() ?? item['phone_masked']?.toString() ?? ''),
+              title: Text(item.displayName),
+              subtitle: Text(item.displayPhone),
               trailing: _buildStatusChip(item),
-              onTap: () => _openUserDetail(item['id'].toString()),
+              onTap: () => _openUserDetail(item.id),
             ),
           ),
         )
         .toList();
   }
 
-  String _displayName(Map<String, dynamic> item) {
-    final first = item['first_name']?.toString() ?? '';
-    final last = item['last_name']?.toString() ?? '';
-    final full = '$first $last'.trim();
-    return full.isEmpty ? 'Utilisateur' : full;
-  }
-
-  String _initials(Map<String, dynamic> item) {
-    final name = _displayName(item);
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-
-  Widget _buildStatusChip(Map<String, dynamic> item) {
-    final isFriend = item['is_friend'] == true;
+  Widget _buildStatusChip(UserSummary item) {
+    final isFriend = item.isFriend;
     if (isFriend) {
       return Chip(
         label: const Text('Ami'),
@@ -146,7 +136,7 @@ class _AddContactPageState extends State<AddContactPage> {
 
   Future<void> _performSearch() async {
     final query = _searchController.text.trim();
-    final digits = query.replaceAll(RegExp(r'\D'), '');
+    final digits = normalizeDigits(query);
     if (digits.length < 2) {
       setState(() {
         _results = [];
@@ -170,14 +160,7 @@ class _AddContactPageState extends State<AddContactPage> {
       if (!mounted || token != _searchToken) return;
       if (response['ok'] == true) {
         final data = response['data'];
-        final list = <Map<String, dynamic>>[];
-        if (data is List) {
-          for (final item in data) {
-            if (item is Map) {
-              list.add(Map<String, dynamic>.from(item));
-            }
-          }
-        }
+        final list = parseList<UserSummary>(data, (map) => UserSummary.fromMap(map));
         setState(() {
           _results = list;
           _isLoading = false;

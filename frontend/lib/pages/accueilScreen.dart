@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
+import '../models/demandeAmi.dart';
 import '../presentation/auth/authController.dart';
 import '../styles/styles.dart';
-import 'addContactPage.dart';
-import 'messagerie.dart';
-import 'settings.dart';
-import 'detailsUser.dart';
+import 'addScreen.dart';
+import 'messagerieScreen.dart';
+import 'compteScreen.dart';
+import 'detailsUserScreen.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -34,7 +35,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   ];
   int _currentIndex = 0;
   late final ApiService _apiService;
-  Map<String, dynamic>? _incomingRequest;
+  FriendRequest? _incomingRequest;
   int _pendingCount = 0;
   Timer? _incomingRequestsTimer;
 
@@ -58,7 +59,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titleForIndex(_currentIndex)),
+        title: Text(_AppBarTitle(_currentIndex)),
         actions: [
           IconButton(
             onPressed: _handleLogout,
@@ -73,9 +74,9 @@ class _MainScaffoldState extends State<MainScaffold> {
             _IncomingRequestBanner(
               request: _incomingRequest!,
               pendingCount: _pendingCount,
-              onAccept: () => _acceptRequest(_incomingRequest!['id']),
-              onDecline: () => _declineRequest(_incomingRequest!['id']),
-              onView: () => _viewRequester(_incomingRequest!['requester_id']),
+              onAccept: () => _acceptRequest(_incomingRequest!.id),
+              onDecline: () => _declineRequest(_incomingRequest!.id),
+              onView: () => _viewRequester(_incomingRequest!.requesterId),
             ),
           Expanded(
             child: IndexedStack(
@@ -100,21 +101,21 @@ class _MainScaffoldState extends State<MainScaffold> {
           _buildAddItem(),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
-            label: 'Paramètres',
+            label: 'Compte',
           ),
         ],
       ),
     );
   }
 
-  String _titleForIndex(int index) {
+  String _AppBarTitle(int index) {
     switch (index) {
       case 0:
         return 'Messages';
       case 1:
         return 'Ajout de contact';
       case 2:
-        return 'Paramètres';
+        return 'Compte';
       default:
         return 'Messages';
     }
@@ -141,7 +142,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     return BottomNavigationBarItem(
       icon: icon,
       activeIcon: icon,
-      label: 'Plus',
+      label: 'Ajouter',
     );
   }
 
@@ -159,17 +160,21 @@ class _MainScaffoldState extends State<MainScaffold> {
       if (data is! List) {
         return;
       }
+      final parsed = data
+          .whereType<Map>()
+          .map((item) => FriendRequest.fromMap(Map<String, dynamic>.from(item)))
+          .toList();
       if (!mounted) return;
       setState(() {
-        _pendingCount = data.length;
-        _incomingRequest = data.isNotEmpty ? Map<String, dynamic>.from(data.first) : null;
+        _pendingCount = parsed.length;
+        _incomingRequest = parsed.isNotEmpty ? parsed.first : null;
       });
     } catch (_) {
       // silence polling errors
     }
   }
 
-  Future<void> _acceptRequest(dynamic requestId) async {
+  Future<void> _acceptRequest(String? requestId) async {
     if (requestId == null) return;
     final response = await _apiService.acceptFriendRequest(requestId: requestId.toString());
     if (response['ok'] != true && mounted) {
@@ -178,7 +183,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     await _loadIncomingRequests();
   }
 
-  Future<void> _declineRequest(dynamic requestId) async {
+  Future<void> _declineRequest(String? requestId) async {
     if (requestId == null) return;
     final response = await _apiService.declineFriendRequest(requestId: requestId.toString());
     if (response['ok'] != true && mounted) {
@@ -187,7 +192,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     await _loadIncomingRequests();
   }
 
-  Future<void> _viewRequester(dynamic requesterId) async {
+  Future<void> _viewRequester(String? requesterId) async {
     if (requesterId == null) return;
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => UserDetailPage(userId: requesterId.toString())),
@@ -211,7 +216,7 @@ class _IncomingRequestBanner extends StatelessWidget {
     required this.onView,
   });
 
-  final Map<String, dynamic> request;
+  final FriendRequest request;
   final int pendingCount;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
@@ -219,8 +224,7 @@ class _IncomingRequestBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final requester = request['requester'] as Map<String, dynamic>?;
-    final name = _buildName(requester);
+    final name = request.requester?.displayName ?? 'Quelqu\'un';
     final extra = pendingCount > 1 ? ' (+${pendingCount - 1})' : '';
     return Container(
       width: double.infinity,
@@ -273,10 +277,4 @@ class _IncomingRequestBanner extends StatelessWidget {
     );
   }
 
-  String _buildName(Map<String, dynamic>? requester) {
-    final first = requester?['first_name']?.toString() ?? '';
-    final last = requester?['last_name']?.toString() ?? '';
-    final full = '$first $last'.trim();
-    return full.isEmpty ? 'Quelqu\'un' : full;
-  }
 }

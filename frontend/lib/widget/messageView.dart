@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:whatsapp/utils/utils.dart';
 
-import '../models/chat.dart';
-import '../utils/appColors.dart';
-import '../utils/timeUtils.dart';
+import 'package:whatsapp/models/chat.dart';
+import 'package:whatsapp/utils/appColors.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -65,7 +65,7 @@ class MessageBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  formatShortTime(message.time),
+                  formatTemps(message.time),
                   style: TextStyle(
                     color: isMine ? Colors.white70 : Colors.grey.shade700,
                     fontSize: 11,

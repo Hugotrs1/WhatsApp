@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/auth/authModele.dart';
 import '../../domain/auth/authService.dart';
-import '../../pages/accueil.dart';
+import '../../pages/accueilScreen.dart';
 import '../auth/authController.dart';
 import '../auth/authPage.dart';
 

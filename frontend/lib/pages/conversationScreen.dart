@@ -1,6 +1,5 @@
 // ignore_for_file: file_names
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
@@ -11,6 +10,7 @@ import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
 import '../utils/notificationSound.dart';
+import '../utils/utils.dart';
 import '../widget/avatar.dart';
 import '../widget/messageView.dart';
 
@@ -100,14 +100,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             ),
           ],
         ),
-        actions: const [
-          Icon(Icons.videocam),
-          SizedBox(width: 12),
-          Icon(Icons.call),
-          SizedBox(width: 12),
-          Icon(Icons.more_vert),
-          SizedBox(width: 4),
-        ],
       ),
       body: Column(
         children: [
@@ -261,7 +253,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         await _loadMessages();
       } else {
         _controller.text = text;
-        _showMessageError(_readErrorMessage(response));
+        _showMessageError(_apiService.readErrorMessage(response));
       }
     } catch (error, stackTrace) {
       log(
@@ -303,7 +295,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         if (caption.isNotEmpty) {
           _controller.text = caption;
         }
-        _showMessageError(_readErrorMessage(response));
+        _showMessageError(_apiService.readErrorMessage(response));
       }
     } catch (error, stackTrace) {
       log(
@@ -373,7 +365,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       } else {
         setState(() {
           _isLoading = false;
-          _loadError = _readErrorMessage(response);
+          _loadError = _apiService.readErrorMessage(response);
         });
       }
     } catch (error, stackTrace) {
@@ -406,7 +398,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final data = response['data'];
         final appearOffline = data is Map && data['appear_offline'] == true;
         final lastSeenRaw = data is Map ? data['last_seen']?.toString() : null;
-        final lastSeen = _parseDate(lastSeenRaw);
+        final lastSeen = tryParseDateTime(lastSeenRaw);
         setState(() {
           _estConnecte = !appearOffline;
           _lastSeen = lastSeen;
@@ -526,57 +518,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Future<int?> _readCurrentUserId() async {
     final token = await _apiService.getToken();
-    return _decodeUserId(token);
-  }
-
-  int? _decodeUserId(String? token) {
-    if (token == null || token.isEmpty) return null;
-    final parts = token.split('.');
-    if (parts.length != 3) return null;
-    try {
-      final normalized = base64Url.normalize(parts[1]);
-      final payload = utf8.decode(base64Url.decode(normalized));
-      final data = jsonDecode(payload);
-      if (data is Map<String, dynamic>) {
-        final sub = data['sub'];
-        if (sub is int) return sub;
-        if (sub is String) return int.tryParse(sub);
-      }
-    } catch (_) {
-      return null;
-    }
-    return null;
+    return decodeJwtUserId(token);
   }
 
   List<ChatMessage> _parseMessages(dynamic data, int? currentUserId) {
-    if (data is! List) return [];
-    final parsed = <ChatMessage>[];
-    for (final item in data) {
-      if (item is! Map) continue;
-      final content = item['content']?.toString() ?? '';
-      final typeValue = item['type']?.toString().toLowerCase();
-      final messageType = typeValue == 'image' ? MessageType.image : MessageType.text;
-      final mediaUrl =
-          messageType == MessageType.image ? _resolveMediaUrl(item['media_url']?.toString()) : null;
-      if (messageType == MessageType.text && content.isEmpty) continue;
-      if (messageType == MessageType.image && (mediaUrl == null || mediaUrl.isEmpty)) {
-        continue;
-      }
-      final senderId = _asInt(item['sender_id']);
-      final isMine = currentUserId != null && senderId == currentUserId;
-      parsed.add(
-        ChatMessage(
-          id: item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-          sender: isMine ? 'Moi' : widget.chat.title,
-          content: content,
-          time: _parseMessageTime(item['created_at']),
-          isMine: isMine,
-          status: MessageStatus.sent,
-          type: messageType,
-          mediaUrl: mediaUrl,
-        ),
+    final parsed = parseList<ChatMessage>(data, (map) {
+      return ChatMessage.fromApi(
+        map,
+        chatTitle: widget.chat.title,
+        baseUrl: _apiService.baseUrl,
+        currentUserId: currentUserId,
       );
-    }
+    });
     parsed.sort((a, b) => a.time.compareTo(b.time));
     return parsed;
   }
@@ -586,7 +539,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     var maxId = _lastMessageId;
     for (final item in data) {
       if (item is! Map) continue;
-      final id = _asInt(item['id']);
+      final id = parseInt(item['id']);
       if (id != null && id > maxId) {
         maxId = id;
       }
@@ -594,32 +547,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return maxId;
   }
 
-  int? _asInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    return int.tryParse(value.toString());
-  }
-
-  DateTime _parseMessageTime(dynamic value) {
-    if (value is String && value.isNotEmpty) {
-      final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-      final parsed = DateTime.tryParse(normalized);
-      if (parsed != null) return parsed;
-    }
-    return DateTime.now();
-  }
-
   bool _hasIncomingMessages(List<ChatMessage> messages) {
     for (final message in messages) {
       if (!message.isMine) return true;
     }
     return false;
-  }
-
-  DateTime? _parseDate(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-    return DateTime.tryParse(normalized);
   }
 
   String _statusLabel() {
@@ -630,45 +562,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       return 'En ligne';
     }
     if (_lastSeen != null) {
-      return _formatLastSeen(_lastSeen!);
+      return formatLastSeen(_lastSeen!);
     }
     return 'Hors ligne';
-  }
-
-  String _formatLastSeen(DateTime value) {
-    final now = DateTime.now();
-    final isSameDay = now.year == value.year && now.month == value.month && now.day == value.day;
-    if (isSameDay) {
-      final hh = value.hour.toString().padLeft(2, '0');
-      final mm = value.minute.toString().padLeft(2, '0');
-      return 'Vu à $hh:$mm';
-    }
-    final dd = value.day.toString().padLeft(2, '0');
-    final mm = value.month.toString().padLeft(2, '0');
-    return 'Vu le $dd/$mm';
-  }
-
-  String? _resolveMediaUrl(String? mediaUrl) {
-    if (mediaUrl == null) return null;
-    final trimmed = mediaUrl.trim();
-    if (trimmed.isEmpty) return null;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    final base = _apiService.baseUrl.endsWith('/')
-        ? _apiService.baseUrl.substring(0, _apiService.baseUrl.length - 1)
-        : _apiService.baseUrl;
-    final normalized = trimmed.startsWith('/') ? trimmed : '/$trimmed';
-    return '$base$normalized';
-  }
-
-  String _readErrorMessage(Map<String, dynamic> response) {
-    final error = response['error'];
-    if (error is Map && error['message'] is String) {
-      return error['message'] as String;
-    }
-    if (error is String) return error;
-    return _genericErrorMessage;
   }
 
   void _showMessageError(String message) {

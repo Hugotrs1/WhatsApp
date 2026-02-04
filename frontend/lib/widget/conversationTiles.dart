@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:whatsapp/utils/utils.dart';
+import 'package:whatsapp/models/chat.dart';
+import 'package:whatsapp/utils/appColors.dart';
 
-import '../models/chat.dart';
-import '../utils/appColors.dart';
-import '../utils/timeUtils.dart';
 import 'avatar.dart';
 
 class ChatListTile extends StatelessWidget {
@@ -80,7 +80,7 @@ class ChatListTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  formatShortTime(chat.lastActivity),
+                  formatTemps(chat.lastActivity),
                   style: TextStyle(
                     fontSize: 12,
                     color: hasUnread ? AppColors.unread : Colors.grey.shade600,

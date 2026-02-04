@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
 import '../models/chat.dart';
+import '../models/userSummary.dart';
 import '../styles/styles.dart';
 import '../utils/notificationSound.dart';
-import '../widget/chatListTile.dart';
-import 'chatDetail.dart';
+import '../utils/utils.dart';
+import '../widget/conversationTiles.dart';
+import 'conversationScreen.dart';
 
 class ChatsPage extends StatefulWidget {
   const ChatsPage({super.key});
@@ -24,14 +26,14 @@ class _ChatsPageState extends State<ChatsPage> {
 
   late final ApiService _apiService;
   final List<Chat> _chats = [];
-  final List<Map<String, dynamic>> _friends = [];
+  final List<UserSummary> _friends = [];
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
   Timer? _pollingTimer;
   final Map<String, int> _lastMessageIdByChat = {};
   bool _hasLoadedOnce = false;
   int _searchToken = 0;
-  List<Map<String, dynamic>> _suggestions = [];
+  List<UserSummary> _suggestions = [];
   String _query = '';
   bool _isLoading = true;
   bool _isFetching = false;
@@ -209,12 +211,12 @@ class _ChatsPageState extends State<ChatsPage> {
           leading: CircleAvatar(
             backgroundColor: WhatsAppStyles.primaryColor.withOpacity(0.1),
             child: Text(
-              _suggestionInitials(s),
+              s.initials,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          title: Text(_suggestionName(s)),
-          subtitle: Text(s['phone']?.toString() ?? s['phone_masked']?.toString() ?? ''),
+          title: Text(s.displayName),
+          subtitle: Text(s.displayPhone),
           trailing: const Icon(Icons.chat_outlined),
           onTap: () => _openSuggestion(s),
         ),
@@ -286,7 +288,7 @@ class _ChatsPageState extends State<ChatsPage> {
       } else {
         setState(() {
           _isLoading = false;
-          _loadError = _readErrorMessage(response);
+          _loadError = _apiService.readErrorMessage(response);
         });
       }
     } catch (error, stackTrace) {
@@ -365,9 +367,9 @@ class _ChatsPageState extends State<ChatsPage> {
     });
   }
 
-  Future<void> _openSuggestion(Map<String, dynamic> suggestion) async {
-    final userId = suggestion['id']?.toString();
-    if (userId == null || userId.isEmpty) return;
+  Future<void> _openSuggestion(UserSummary suggestion) async {
+    final userId = suggestion.id;
+    if (userId.isEmpty) return;
     final existingChat = _findChatByUserId(userId);
     if (existingChat != null) {
       _openChat(existingChat);
@@ -376,7 +378,7 @@ class _ChatsPageState extends State<ChatsPage> {
     final response = await _apiService.createDirectConversation(userId: userId);
     if (!mounted) return;
     if (response['ok'] != true) {
-      _showSnackBar(_readErrorMessage(response));
+      _showSnackBar(_apiService.readErrorMessage(response));
       return;
     }
     final data = response['data'];
@@ -384,7 +386,8 @@ class _ChatsPageState extends State<ChatsPage> {
       _showSnackBar(_genericErrorMessage);
       return;
     }
-    final chat = _chatFromDirectConversation(data);
+    final chat =
+        Chat.fromDirectConversation(Map<String, dynamic>.from(data), fallbackId: userId);
     _openChat(chat);
   }
 
@@ -416,7 +419,7 @@ class _ChatsPageState extends State<ChatsPage> {
     try {
       final response = await _apiService.hideConversation(userId: chat.id);
       if (response['ok'] != true) {
-        _showSnackBar(_readErrorMessage(response));
+        _showSnackBar(_apiService.readErrorMessage(response));
         return false;
       }
       setState(() {
@@ -432,97 +435,19 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   List<Chat> _parseConversations(dynamic data) {
-    if (data is! List) return [];
-    final chats = <Chat>[];
-    for (final item in data) {
-      if (item is! Map) continue;
-      final id = item['user_id']?.toString() ?? item['id']?.toString();
-      if (id == null || id.isEmpty) continue;
-      final title = _buildTitle(item);
-      final typeValue = item['type']?.toString().toLowerCase();
-      final content = item['content']?.toString() ?? '';
-      final trimmedContent = content.trim();
-      final lastMessage = typeValue == 'image'
-          ? (trimmedContent.isEmpty ? 'Photo' : 'Photo - $trimmedContent')
-          : (trimmedContent.isEmpty ? 'Aucun message' : trimmedContent);
-      final unreadCount = item['unread_count'] is int
-          ? item['unread_count'] as int
-          : int.tryParse(item['unread_count']?.toString() ?? '') ?? 0;
-      chats.add(
-        Chat(
-          id: id,
-          title: title,
-          lastMessage: lastMessage,
-          lastActivity: _parseMessageTime(item['created_at']),
-          messages: const [],
-          unreadCount: unreadCount,
-          isMuted: false,
-          isPinned: false,
-          isGroup: false,
-        ),
-      );
-    }
-    return chats;
+    return parseList<Chat>(data, (map) {
+      final chat = Chat.fromConversation(map);
+      return chat.id.isEmpty ? null : chat;
+    });
   }
 
-  Chat _chatFromDirectConversation(Map data) {
-    final id = data['user_id']?.toString() ?? '';
-    final first = data['first_name']?.toString() ?? '';
-    final last = data['last_name']?.toString() ?? '';
-    final fullName = '$first $last'.trim().isEmpty ? 'Utilisateur' : '$first $last'.trim();
-    final lastMessageData = data['last_message'];
-    String lastMessage = 'Envoyer un premier message';
-    DateTime lastActivity = DateTime.now();
-    if (lastMessageData is Map) {
-      final typeValue = lastMessageData['type']?.toString();
-      final content = lastMessageData['content']?.toString() ?? '';
-      lastActivity = _parseMessageTime(lastMessageData['created_at']);
-      if (typeValue == 'image') {
-        lastMessage = content.isEmpty ? 'Photo' : 'Photo - $content';
-      } else {
-        lastMessage = content.isEmpty ? 'Aucun message' : content;
-      }
-    }
-    return Chat(
-      id: id,
-      title: fullName,
-      lastMessage: lastMessage,
-      lastActivity: lastActivity,
-      messages: const [],
-      avatarUrl: null,
-    );
-  }
-
-  String _buildTitle(Map item) {
-    final firstName = item['first_name']?.toString().trim() ?? '';
-    final lastName = item['last_name']?.toString().trim() ?? '';
-    final fullName = '$firstName $lastName'.trim();
-    return fullName.isEmpty ? 'Utilisateur' : fullName;
-  }
-
-  String _suggestionName(Map item) {
-    final first = item['first_name']?.toString() ?? '';
-    final last = item['last_name']?.toString() ?? '';
-    final full = '$first $last'.trim();
-    return full.isEmpty ? 'Utilisateur' : full;
-  }
-
-  String _suggestionInitials(Map item) {
-    final name = _suggestionName(item);
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
-  }
-
-  List<Map<String, dynamic>> _filterFriends(String query) {
+  List<UserSummary> _filterFriends(String query) {
     final q = query.toLowerCase();
-    final digits = query.replaceAll(RegExp(r'\D'), '');
+    final digits = normalizeDigits(query);
     return _friends.where((friend) {
-      final name = _suggestionName(friend).toLowerCase();
-      final phone = friend['phone']?.toString().toLowerCase() ??
-          friend['phone_masked']?.toString().toLowerCase() ??
-          '';
+      final name = friend.displayName.toLowerCase();
       final matchName = name.contains(q);
-      final matchPhone =
-          digits.isNotEmpty && phone.replaceAll(RegExp(r'\D'), '').contains(digits);
+      final matchPhone = digits.isNotEmpty && friend.phoneDigits.contains(digits);
       return matchName || matchPhone;
     }).toList();
   }
@@ -545,14 +470,7 @@ class _ChatsPageState extends State<ChatsPage> {
       if (!mounted) return;
       if (response['ok'] == true) {
         final data = response['data'];
-        final list = <Map<String, dynamic>>[];
-        if (data is List) {
-          for (final item in data) {
-            if (item is Map) {
-              list.add(Map<String, dynamic>.from(item));
-            }
-          }
-        }
+        final list = parseList<UserSummary>(data, (map) => UserSummary.fromMap(map));
         setState(() {
           _friends
             ..clear()
@@ -565,7 +483,7 @@ class _ChatsPageState extends State<ChatsPage> {
       } else {
         setState(() {
           _isFriendsLoading = false;
-          _friendsError = _readErrorMessage(response);
+          _friendsError = _apiService.readErrorMessage(response);
         });
       }
     } catch (error, stackTrace) {
@@ -578,23 +496,7 @@ class _ChatsPageState extends State<ChatsPage> {
     }
   }
 
-  DateTime _parseMessageTime(dynamic value) {
-    if (value is String && value.isNotEmpty) {
-      final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-      final parsed = DateTime.tryParse(normalized);
-      if (parsed != null) return parsed;
-    }
-    return DateTime.now();
-  }
-
-  String _readErrorMessage(Map<String, dynamic> response) {
-    final error = response['error'];
-    if (error is Map && error['message'] is String) {
-      return error['message'] as String;
-    }
-    if (error is String) return error;
-    return _genericErrorMessage;
-  }
+ 
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
 import '../models/chat.dart';
+import '../models/demandeAmi.dart';
+import '../models/profileUser.dart';
 import '../styles/styles.dart';
-import 'chatDetail.dart';
+import 'conversationScreen.dart';
 
 class UserDetailPage extends StatefulWidget {
   const UserDetailPage({super.key, required this.userId});
@@ -15,13 +17,13 @@ class UserDetailPage extends StatefulWidget {
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
-  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez reessayer.';
+  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez réessayer.';
 
   late final ApiService _apiService;
   bool _isLoading = true;
   bool _isActionRunning = false;
   String? _error;
-  Map<String, dynamic>? _profile;
+  UserProfile? _profile;
   int? _currentUserId;
 
   @override
@@ -39,11 +41,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final relation = _profile?['relation'] as Map<String, dynamic>?;
-    final isFriend = relation?['is_friend'] == true;
-    final incoming = relation?['incoming_request'] as Map<String, dynamic>?;
-    final outgoing = relation?['outgoing_request'] as Map<String, dynamic>?;
-    final isMe = _currentUserId != null && _profile?['id'] == _currentUserId;
+    final relation = _profile?.relation;
+    final isFriend = relation?.isFriend == true;
+    final incoming = relation?.incomingRequest;
+    final outgoing = relation?.outgoingRequest;
+    final isMe = _currentUserId != null && _profile?.id == _currentUserId?.toString();
 
     final content = _isLoading
         ? const Center(child: CircularProgressIndicator())
@@ -63,14 +65,13 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   Widget _buildBody({
     required bool isFriend,
-    required Map<String, dynamic>? incoming,
-    required Map<String, dynamic>? outgoing,
+    required FriendRequest? incoming,
+    required FriendRequest? outgoing,
     required bool isMe,
   }) {
-    final firstName = _profile?['first_name']?.toString() ?? '';
-    final lastName = _profile?['last_name']?.toString() ?? '';
-    final phoneMasked = _profile?['phone']?.toString() ?? _profile?['phone_masked']?.toString() ?? '';
-    final fullName = '$firstName $lastName'.trim();
+    final profile = _profile!;
+    final fullName = profile.displayName;
+    final phoneMasked = profile.displayPhone;
 
     return ListView(
       padding: WhatsAppStyles.pagePadding,
@@ -81,7 +82,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
               radius: 32,
               backgroundColor: WhatsAppStyles.primaryColor.withOpacity(0.12),
               child: Text(
-                fullName.isNotEmpty ? fullName[0].toUpperCase() : '?',
+                profile.initials,
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
               ),
             ),
@@ -114,8 +115,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   Widget _buildStatusCard({
     required bool isFriend,
-    required Map<String, dynamic>? incoming,
-    required Map<String, dynamic>? outgoing,
+    required FriendRequest? incoming,
+    required FriendRequest? outgoing,
     required bool isMe,
   }) {
     String label;
@@ -126,10 +127,10 @@ class _UserDetailPageState extends State<UserDetailPage> {
     } else if (isFriend) {
       label = 'Vous êtes amis';
       color = Colors.green.shade700;
-    } else if (incoming != null && incoming['status'] == 'PENDING') {
+    } else if (incoming?.isPending == true) {
       label = 'Souhaite vous ajouter';
       color = Colors.orange.shade700;
-    } else if (outgoing != null && outgoing['status'] == 'PENDING') {
+    } else if (outgoing?.isPending == true) {
       label = 'Demande envoyée';
       color = Colors.blue.shade700;
     } else {
@@ -161,11 +162,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
   Widget _buildActions({
     required bool isFriend,
-    required Map<String, dynamic>? incoming,
-    required Map<String, dynamic>? outgoing,
+    required FriendRequest? incoming,
+    required FriendRequest? outgoing,
   }) {
-    final hasIncoming = incoming != null && incoming['status'] == 'PENDING';
-    final hasOutgoing = outgoing != null && outgoing['status'] == 'PENDING';
+    final hasIncoming = incoming?.isPending == true;
+    final hasOutgoing = outgoing?.isPending == true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,14 +182,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming['id'], true),
+                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming?.id, true),
                   child: const Text('Accepter'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming['id'], false),
+                  onPressed: _isActionRunning ? null : () => _respondToRequest(incoming?.id, false),
                   child: const Text('Décliner'),
                 ),
               ),
@@ -199,7 +200,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isActionRunning ? null : () => _cancelRequest(outgoing['id']),
+                  onPressed: _isActionRunning ? null : () => _cancelRequest(outgoing?.id),
                   child: const Text('Annuler la demande'),
                 ),
               ),
@@ -226,7 +227,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
         final data = response['data'];
         if (data is Map) {
           setState(() {
-            _profile = Map<String, dynamic>.from(data);
+            _profile = UserProfile.fromMap(Map<String, dynamic>.from(data));
             _isLoading = false;
           });
         } else {
@@ -259,19 +260,19 @@ class _UserDetailPageState extends State<UserDetailPage> {
   }
 
   Future<void> _sendFriendRequest() async {
-    final relation = _profile?['relation'] as Map<String, dynamic>?;
-    final isFriend = relation?['is_friend'] == true;
-    final incoming = relation?['incoming_request'] as Map<String, dynamic>?;
-    final outgoing = relation?['outgoing_request'] as Map<String, dynamic>?;
+    final relation = _profile?.relation;
+    final isFriend = relation?.isFriend == true;
+    final incoming = relation?.incomingRequest;
+    final outgoing = relation?.outgoingRequest;
     if (isFriend) {
       _showSnackBar('Vous êtes déjà amis.');
       return;
     }
-    if (outgoing != null && outgoing['status'] == 'PENDING') {
+    if (outgoing?.isPending == true) {
       _showSnackBar('Demande déjà envoyée.');
       return;
     }
-    if (incoming != null && incoming['status'] == 'PENDING') {
+    if (incoming?.isPending == true) {
       _showSnackBar('Cette personne vous a déjà envoyé une demande.');
       return;
     }
@@ -293,11 +294,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
-  Future<void> _respondToRequest(dynamic requestId, bool accept) async {
+  Future<void> _respondToRequest(String? requestId, bool accept) async {
     if (requestId == null) return;
     setState(() => _isActionRunning = true);
     try {
-      final id = requestId.toString();
+      final id = requestId;
       final response = accept
           ? await _apiService.acceptFriendRequest(requestId: id)
           : await _apiService.declineFriendRequest(requestId: id);
@@ -315,11 +316,11 @@ class _UserDetailPageState extends State<UserDetailPage> {
     }
   }
 
-  Future<void> _cancelRequest(dynamic requestId) async {
+  Future<void> _cancelRequest(String? requestId) async {
     if (requestId == null) return;
     setState(() => _isActionRunning = true);
     try {
-      final response = await _apiService.cancelFriendRequest(requestId: requestId.toString());
+      final response = await _apiService.cancelFriendRequest(requestId: requestId);
       if (!mounted) return;
       if (response['ok'] == true) {
         await _loadProfile();
@@ -348,7 +349,8 @@ class _UserDetailPageState extends State<UserDetailPage> {
         _showSnackBar(_genericErrorMessage);
         return;
       }
-      final chat = _chatFromDirectConversation(data);
+      final chat =
+          Chat.fromDirectConversation(Map<String, dynamic>.from(data), fallbackId: widget.userId);
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => ChatDetailPage(chat: chat)),
       );
@@ -357,43 +359,6 @@ class _UserDetailPageState extends State<UserDetailPage> {
         setState(() => _isActionRunning = false);
       }
     }
-  }
-
-  Chat _chatFromDirectConversation(Map data) {
-    final id = data['user_id']?.toString() ?? widget.userId;
-    final firstName = data['first_name']?.toString() ?? '';
-    final lastName = data['last_name']?.toString() ?? '';
-    final fullName = '$firstName $lastName'.trim().isEmpty ? 'Utilisateur' : '$firstName $lastName'.trim();
-    final last = data['last_message'];
-    DateTime lastActivity = DateTime.now();
-    String lastMessage = 'Envoyer un premier message';
-    if (last is Map) {
-      final typeValue = last['type']?.toString();
-      final content = last['content']?.toString() ?? '';
-      lastActivity = _parseTime(last['created_at']);
-      if (typeValue == 'image') {
-        lastMessage = content.isEmpty ? 'Photo' : 'Photo - $content';
-      } else {
-        lastMessage = content.isEmpty ? 'Aucun message' : content;
-      }
-    }
-    return Chat(
-      id: id,
-      title: fullName,
-      lastMessage: lastMessage,
-      lastActivity: lastActivity,
-      messages: const [],
-      avatarUrl: null,
-    );
-  }
-
-  DateTime _parseTime(dynamic value) {
-    if (value is String && value.isNotEmpty) {
-      final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-      final parsed = DateTime.tryParse(normalized);
-      if (parsed != null) return parsed;
-    }
-    return DateTime.now();
   }
 
   void _showSnackBar(String message) {
