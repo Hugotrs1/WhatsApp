@@ -14,7 +14,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMine = message.isMine;
-    final bubbleColor = isMine ? const Color(0xFFE6F7F1) : Colors.white;
+    final bubbleColor = isMine ? const Color(0xFFDCF8C6) : Colors.white;
     final textColor = Colors.grey.shade900;
     final content = message.content.trim();
 
