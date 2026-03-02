@@ -29,9 +29,7 @@ class ChatListTile extends StatelessWidget {
           children: [
             Avatar(
               initials: chat.title.isNotEmpty ? chat.title[0] : '?',
-              imageUrl: chat.avatarUrl,
-              highlight: chat.unreadCount > 0,
-              muted: chat.isMuted,
+              highlight: hasUnread,
               radius: 26,
             ),
             const SizedBox(width: 12),
@@ -39,29 +37,13 @@ class ChatListTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          chat.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (chat.isPinned)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Icon(Icons.push_pin, size: 16, color: Colors.grey.shade600),
-                        ),
-                      if (chat.isMuted)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Icon(Icons.volume_off, size: 16, color: Colors.grey.shade600),
-                        ),
-                    ],
+                  Text(
+                    chat.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(

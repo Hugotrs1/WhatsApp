@@ -468,7 +468,7 @@ class _RegisterFormState extends State<RegisterForm> {
           children: [
             Text('Créer un compte', style: titleStyle),
             const SizedBox(height: 6),
-            Text('Rejoins tes amis et tes groupes en quelques secondes.', style: subtitleStyle),
+            Text('Rejoins tes amis en quelques secondes.', style: subtitleStyle),
             const SizedBox(height: 18),
             _AuthTextField(
               controller: _firstNameController,

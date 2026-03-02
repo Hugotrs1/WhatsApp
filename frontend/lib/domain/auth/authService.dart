@@ -82,7 +82,6 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    await _apiService.clearConnectionStatus();
     await _tokenStorage.clearToken();
   }
 

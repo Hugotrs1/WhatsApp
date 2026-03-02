@@ -58,18 +58,6 @@ String formatLastSeen(DateTime value, {DateTime? now}) {
   return 'Vu le $dd/$mm';
 }
 
-String? resolveMediaUrl(String? mediaUrl, String baseUrl) {
-  if (mediaUrl == null) return null;
-  final trimmed = mediaUrl.trim();
-  if (trimmed.isEmpty) return null;
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  final base = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-  final normalized = trimmed.startsWith('/') ? trimmed : '/$trimmed';
-  return '$base$normalized';
-}
-
 int? decodeJwtUserId(String? token) {
   if (token == null || token.isEmpty) return null;
   final parts = token.split('.');

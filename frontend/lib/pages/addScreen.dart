@@ -26,6 +26,8 @@ class _AddContactPageState extends State<AddContactPage> {
   bool _isLoading = false;
   String? _error;
   int _searchToken = 0;
+  bool _isShowingAll = false;
+  bool _suppressSearch = false;
   List<UserSummary> _results = [];
 
   @override
@@ -66,6 +68,14 @@ class _AddContactPageState extends State<AddContactPage> {
             hintText: 'Rechercher par numéro',
           ),
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _isLoading ? null : _loadAllUsers,
+            child: const Text('Afficher tout le monde'),
+          ),
+        ),
         const SizedBox(height: 16),
         if (_isLoading) const LinearProgressIndicator(),
         if (_error != null)
@@ -84,13 +94,15 @@ class _AddContactPageState extends State<AddContactPage> {
 
   List<Widget> _buildResultsList() {
     if (_results.isEmpty) {
+      final showHint = _searchController.text.trim().length < 2 && !_isShowingAll;
+      final message = _isShowingAll
+          ? 'Aucun utilisateur.'
+          : (showHint ? 'Commence a taper un numero.' : 'Aucun utilisateur trouve.');
       return [
         const SizedBox(height: 40),
         Center(
           child: Text(
-            _searchController.text.trim().length < 2
-                ? 'Commence à taper un numéro.'
-                : 'Aucun utilisateur trouvé.',
+            message,
             style: WhatsAppStyles.mutedBodyStyle(context),
           ),
         ),
@@ -130,6 +142,11 @@ class _AddContactPageState extends State<AddContactPage> {
   }
 
   void _onSearchChanged() {
+    if (_suppressSearch) {
+      _suppressSearch = false;
+      return;
+    }
+    _isShowingAll = false;
     _debounce?.cancel();
     _debounce = Timer(_debounceDelay, _performSearch);
   }
@@ -147,6 +164,7 @@ class _AddContactPageState extends State<AddContactPage> {
     }
 
     final token = ++_searchToken;
+    _isShowingAll = false;
     setState(() {
       _isLoading = true;
       _error = null;
@@ -180,10 +198,49 @@ class _AddContactPageState extends State<AddContactPage> {
     }
   }
 
+  Future<void> _loadAllUsers() async {
+    final token = ++_searchToken;
+    _suppressSearch = true;
+    _searchController.clear();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _isShowingAll = true;
+    });
+
+    try {
+      final response = await _apiService.listAllUsers(limit: 100);
+      if (!mounted || token != _searchToken) return;
+      if (response['ok'] == true) {
+        final data = response['data'];
+        final list = parseList<UserSummary>(data, (map) => UserSummary.fromMap(map));
+        setState(() {
+          _results = list;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _error = _apiService.readErrorMessage(response);
+        });
+      }
+    } catch (_) {
+      if (!mounted || token != _searchToken) return;
+      setState(() {
+        _isLoading = false;
+        _error = _genericErrorMessage;
+      });
+    }
+  }
+
   Future<void> _openUserDetail(String userId) async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => UserDetailPage(userId: userId)),
     );
-    _performSearch();
+    if (_isShowingAll) {
+      _loadAllUsers();
+    } else {
+      _performSearch();
+    }
   }
 }

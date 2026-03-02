@@ -49,7 +49,6 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               Avatar(
                 initials: initials,
-                imageUrl: null,
                 radius: 30,
               ),
               const SizedBox(width: 12),

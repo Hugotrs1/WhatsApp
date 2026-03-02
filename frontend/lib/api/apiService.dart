@@ -26,7 +26,6 @@ class ApiService {
       baseUrl: baseUrl ?? _defaultBaseUrl(),
       client: client ?? http.Client(),
       timeout: timeout ?? const Duration(seconds: 15),
-      secureStorage: resolvedStorage,
       tokenStorage: tokenStorage ?? TokenStorage(resolvedStorage),
       credentialsStorage: credentialsStorage ?? CredentialsStorage(resolvedStorage),
     );
@@ -36,23 +35,19 @@ class ApiService {
     required this.baseUrl,
     required http.Client client,
     required Duration timeout,
-    required SecureStorage secureStorage,
     required TokenStorage tokenStorage,
     required CredentialsStorage credentialsStorage,
   })  : _client = client,
         _timeout = timeout,
-        _secureStorage = secureStorage,
         _tokenStorage = tokenStorage,
         _credentialsStorage = credentialsStorage;
 
-  static const String _connectionStatusKey = 'est_connecte';
   static const String _genericErrorMessage =
       'Une erreur est survenue. Veuillez réessayer.';
 
   final String baseUrl;
   final http.Client _client;
   final Duration _timeout;
-  final SecureStorage _secureStorage;
   final TokenStorage _tokenStorage;
   final CredentialsStorage _credentialsStorage;
 
@@ -127,38 +122,11 @@ class ApiService {
     await _credentialsStorage.clear();
   }
 
-  Future<void> saveConnectionStatus({required bool estConnecte}) async {
-    // Deprecated: kept for backward-compat. Remote status is handled via updateStatus.
-    final key = await _connectionStatusKeyForUser();
-    await _secureStorage.writeBool(key, estConnecte);
-  }
-
-  Future<bool> getConnectionStatus() async {
-    // Deprecated: prefer getMyStatus.
-    final key = await _connectionStatusKeyForUser();
-    return (await _secureStorage.readBool(key)) ?? false;
-  }
-
-  Future<void> clearConnectionStatus() async {
-    final key = await _connectionStatusKeyForUser();
-    await _secureStorage.delete(key);
-    if (key != _connectionStatusKey) {
-      await _secureStorage.delete(_connectionStatusKey);
-    }
-  }
-
   Future<void> clearAuthState({bool clearRemembered = false}) async {
-    await clearConnectionStatus();
     await clearToken();
     if (clearRemembered) {
       await clearRememberedCredentials();
     }
-  }
-
-  Future<String> _connectionStatusKeyForUser() async {
-    final userId = await _tokenStorage.readUserId();
-    if (userId == null) return _connectionStatusKey;
-    return '${_connectionStatusKey}_$userId';
   }
 
   Future<Map<String, dynamic>> login({
@@ -241,10 +209,6 @@ class ApiService {
     );
   }
 
-  Future<Map<String, dynamic>> listFriends() {
-    return _request('GET', '/api/friends');
-  }
-
   Future<Map<String, dynamic>> getConversations() {
     return _request('GET', '/api/conversations');
   }
@@ -257,14 +221,6 @@ class ApiService {
     );
   }
 
-  Future<Map<String, dynamic>> hideConversation({required String userId}) {
-    return _request('POST', '/api/conversations/$userId/hide');
-  }
-
-  Future<Map<String, dynamic>> unhideConversation({required String userId}) {
-    return _request('POST', '/api/conversations/$userId/unhide');
-  }
-
   Future<Map<String, dynamic>> updateStatus({required bool appearOffline}) {
     return _request(
       'POST',
@@ -275,21 +231,6 @@ class ApiService {
 
   Future<Map<String, dynamic>> getStatusForUser({required String userId}) {
     return _request('GET', '/api/status/$userId');
-  }
-
-  Future<Map<String, dynamic>> setTyping({
-    required String userId,
-    required bool isTyping,
-  }) {
-    return _request(
-      'POST',
-      '/api/conversations/$userId/typing',
-      body: {'is_typing': isTyping},
-    );
-  }
-
-  Future<Map<String, dynamic>> getTypingStatus({required String userId}) {
-    return _request('GET', '/api/conversations/$userId/typing');
   }
 
   Future<Map<String, dynamic>> getMyStatus() async {
@@ -328,36 +269,14 @@ class ApiService {
     );
   }
 
-  Future<Map<String, dynamic>> sendImageMessage({
-    required String receiverId,
-    required String imagePath,
-    String? caption,
-  }) {
-    final fields = <String, String>{
-      'receiver_id': receiverId,
-    };
-    final trimmedCaption = caption?.trim();
-    if (trimmedCaption != null && trimmedCaption.isNotEmpty) {
-      fields['content'] = trimmedCaption;
-    }
-    return _multipartRequest(
-      '/api/messages',
-      fields: fields,
-      fileField: 'image',
-      filePath: imagePath,
+  Future<Map<String, dynamic>> listAllUsers({int limit = 100}) {
+    return _request(
+      'GET',
+      '/api/users',
+      queryParameters: {
+        'limit': limit.toString(),
+      },
     );
-  }
-
-  Future<Map<String, dynamic>> deleteMessage({required String id}) {
-    return _request('DELETE', '/messages/$id');
-  }
-
-  Future<Map<String, dynamic>> getInfo() async {
-    final primary = await _request('GET', '/api/health');
-    if (primary['status'] != 404) {
-      return primary;
-    }
-    return _request('GET', '/');
   }
 
   void dispose() {
@@ -425,66 +344,6 @@ class ApiService {
         status: response.statusCode,
         code: 'http_error',
         message: _buildErrorMessage(response.statusCode, parsed),
-        details: parsed,
-      );
-    } catch (error, stackTrace) {
-      developer.log(
-        'Network error for $uri',
-        name: 'ApiService',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return _error(
-        status: 0,
-        code: 'network_error',
-        message: _genericErrorMessage,
-      );
-    }
-  }
-
-  Future<Map<String, dynamic>> _multipartRequest(
-    String path, {
-    required Map<String, String> fields,
-    required String fileField,
-    required String filePath,
-  }) async {
-    final uri = _buildUri(path, null);
-    final request = http.MultipartRequest('POST', uri);
-    request.headers['Accept'] = 'application/json';
-    final token = await _tokenStorage.readToken();
-    if (token != null && token.isNotEmpty) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
-    request.fields.addAll(fields);
-    request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
-
-    try {
-      final streamed = await request.send().timeout(_timeout);
-      final body = await streamed.stream.bytesToString();
-      final parsed = await _tryParseJson(body);
-      if (parsed is Map && parsed.containsKey('ok')) {
-        if (streamed.statusCode == 401) {
-          await clearAuthState();
-        }
-        final normalized = Map<String, dynamic>.from(parsed);
-        normalized['status'] = streamed.statusCode;
-        return normalized;
-      }
-      if (streamed.statusCode >= 200 && streamed.statusCode < 300) {
-        return _ok(status: streamed.statusCode, data: parsed);
-      }
-      if (streamed.statusCode == 401) {
-        await clearAuthState();
-      }
-      developer.log(
-        'HTTP error ${streamed.statusCode} for $uri',
-        name: 'ApiService',
-        error: body,
-      );
-      return _error(
-        status: streamed.statusCode,
-        code: 'http_error',
-        message: _buildErrorMessage(streamed.statusCode, parsed),
         details: parsed,
       );
     } catch (error, stackTrace) {

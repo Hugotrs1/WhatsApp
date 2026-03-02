@@ -2,12 +2,10 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
 import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
-import '../utils/notificationSound.dart';
 import '../utils/utils.dart';
 import '../widget/avatar.dart';
 import '../widget/messageView.dart';
@@ -27,42 +25,31 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   late final ApiService _apiService;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final FocusNode _inputFocusNode = FocusNode();
   final List<ChatMessage> _messages = [];
-  bool _showEmojiPicker = false;
   bool _isLoading = true;
   bool _isFetching = false;
   bool _isSending = false;
   bool _estConnecte = false;
-  bool _isTypingRemote = false;
-  bool _isTypingSelf = false;
   DateTime? _lastSeen;
   String? _loadError;
   int? _currentUserId;
   int _lastMessageId = 0;
   Timer? _pollingTimer;
-  Timer? _typingDebounce;
-  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
-    _controller.addListener(_onTypingChanged);
     _loadConnectionStatus();
     _loadMessages(reset: true);
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 400), (_) => _pollUpdates());
+    _pollingTimer = Timer.periodic(const Duration(seconds: 1), (_) => _pollUpdates());
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
-    _typingDebounce?.cancel();
-    _setTyping(false);
-    _controller.removeListener(_onTypingChanged);
     _controller.dispose();
     _scrollController.dispose();
-    _inputFocusNode.dispose();
     _apiService.dispose();
     super.dispose();
   }
@@ -78,7 +65,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           children: [
             Avatar(
               initials: widget.chat.title.isNotEmpty ? widget.chat.title[0] : '?',
-              imageUrl: widget.chat.avatarUrl,
               radius: 18,
             ),
             const SizedBox(width: 10),
@@ -108,10 +94,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: _toggleEmojiPicker,
-                    icon: const Icon(Icons.emoji_emotions_outlined),
-                  ),
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -121,11 +103,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                           Expanded(
                             child: TextField(
                               controller: _controller,
-                              focusNode: _inputFocusNode,
                               decoration: WhatsAppStyles.messageInputDecoration,
                               minLines: 1,
                               maxLines: 4,
-                              onTap: _hideEmojiPicker,
                             ),
                           ),
                         ],
@@ -144,14 +124,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
             ),
           ),
-          if (_showEmojiPicker)
-            SizedBox(
-              height: 280,
-              child: EmojiPicker(
-                textEditingController: _controller,
-                config: Config(),
-              ),
-            ),
         ],
       ),
     );
@@ -203,10 +175,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         itemCount: _messages.length,
         itemBuilder: (context, index) {
           final message = _messages[index];
-          final showStatus = message.isMine && index == _messages.length - 1;
           return MessageBubble(
             message: message,
-            showStatus: showStatus,
           );
         },
       ),
@@ -224,7 +194,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       _showMessageError("Merci d'ecrire un message.");
       return;
     }
-    _setTyping(false);
     _controller.clear();
     setState(() {
       _isSending = true;
@@ -284,7 +253,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final data = response['data'];
         final parsed = _parseMessages(data, _currentUserId);
         final newLastId = _maxMessageId(data);
-        final hasIncoming = !reset && _hasLoadedOnce && _hasIncomingMessages(parsed);
         setState(() {
           _loadError = null;
           if (reset) {
@@ -299,10 +267,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
           _isLoading = false;
         });
-        if (hasIncoming) {
-          NotificationSound.playNotification();
-        }
-        _hasLoadedOnce = true;
         if (parsed.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
         }
@@ -331,7 +295,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   Future<void> _pollUpdates() async {
     await _loadMessages();
     await _loadConnectionStatus();
-    await _loadTypingStatus();
   }
 
   Future<void> _loadConnectionStatus() async {
@@ -353,24 +316,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  Future<void> _loadTypingStatus() async {
-    try {
-      final response = await _apiService.getTypingStatus(userId: widget.chat.id);
-      if (!mounted) return;
-      if (response['ok'] == true) {
-        final data = response['data'];
-        final isTyping = data is Map && data['is_typing'] == true;
-        if (isTyping != _isTypingRemote) {
-          setState(() {
-            _isTypingRemote = isTyping;
-          });
-        }
-      }
-    } catch (_) {
-      // ignore errors for typing
-    }
-  }
-
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
@@ -378,48 +323,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
-  }
-
-  void _toggleEmojiPicker() {
-    setState(() {
-      _showEmojiPicker = !_showEmojiPicker;
-    });
-    if (_showEmojiPicker) {
-      _inputFocusNode.unfocus();
-    } else {
-      _inputFocusNode.requestFocus();
-    }
-  }
-
-  void _hideEmojiPicker() {
-    if (!_showEmojiPicker) return;
-    setState(() {
-      _showEmojiPicker = false;
-    });
-  }
-
-  void _onTypingChanged() {
-    final hasText = _controller.text.trim().isNotEmpty;
-    if (hasText) {
-      _setTyping(true);
-      _typingDebounce?.cancel();
-      _typingDebounce = Timer(const Duration(seconds: 2), () {
-        _setTyping(false);
-      });
-    } else {
-      _typingDebounce?.cancel();
-      _setTyping(false);
-    }
-  }
-
-  Future<void> _setTyping(bool isTyping) async {
-    if (_isTypingSelf == isTyping) return;
-    _isTypingSelf = isTyping;
-    try {
-      await _apiService.setTyping(userId: widget.chat.id, isTyping: isTyping);
-    } catch (_) {
-      // ignore typing errors
-    }
   }
 
   Future<int?> _readCurrentUserId() async {
@@ -432,7 +335,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       return ChatMessage.fromApi(
         map,
         chatTitle: widget.chat.title,
-        baseUrl: _apiService.baseUrl,
         currentUserId: currentUserId,
       );
     });
@@ -453,17 +355,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     return maxId;
   }
 
-  bool _hasIncomingMessages(List<ChatMessage> messages) {
-    for (final message in messages) {
-      if (!message.isMine) return true;
-    }
-    return false;
-  }
-
   String _statusLabel() {
-    if (_isTypingRemote) {
-      return 'Écrit...';
-    }
     if (_estConnecte) {
       return 'En ligne';
     }
