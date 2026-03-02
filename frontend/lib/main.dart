@@ -43,7 +43,7 @@ class WhatsappApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WhatsApp clone',
+      title: 'WhatsApp',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme(),
       home: AppBootstrap(authService: authService),

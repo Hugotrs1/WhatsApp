@@ -59,7 +59,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_AppBarTitle(_currentIndex)),
+        title: Text(_AppBarTitle(_currentIndex), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600), textAlign: TextAlign.center,),
         actions: [
           IconButton(
             onPressed: _handleLogout,
@@ -100,7 +100,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
           _buildAddItem(),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.account_circle),
             label: 'Compte',
           ),
         ],

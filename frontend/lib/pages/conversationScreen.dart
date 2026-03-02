@@ -4,8 +4,6 @@ import 'dart:developer';
 
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-
 import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
@@ -24,14 +22,12 @@ class ChatDetailPage extends StatefulWidget {
 }
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
-  static const String _genericErrorMessage =
-      'Une erreur est survenue. Veuillez reessayer.';
+  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez réessayer.';
 
   late final ApiService _apiService;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
-  final ImagePicker _imagePicker = ImagePicker();
   final List<ChatMessage> _messages = [];
   bool _showEmojiPicker = false;
   bool _isLoading = true;
@@ -131,14 +127,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                               maxLines: 4,
                               onTap: _hideEmojiPicker,
                             ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.attach_file),
-                            onPressed: _pickAttachment,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.camera_alt_outlined),
-                            onPressed: _openCamera,
                           ),
                         ],
                       ),
@@ -263,50 +251,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       );
       if (!mounted) return;
       _controller.text = text;
-      _showMessageError(_genericErrorMessage);
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isSending = false;
-      });
-    }
-  }
-
-  Future<void> _sendImageMessage(XFile image) async {
-    if (_isSending) return;
-    final caption = _controller.text.trim();
-    _setTyping(false);
-    _controller.clear();
-    setState(() {
-      _isSending = true;
-    });
-
-    try {
-      final response = await _apiService.sendImageMessage(
-        receiverId: widget.chat.id,
-        imagePath: image.path,
-        caption: caption.isEmpty ? null : caption,
-      );
-      if (!mounted) return;
-
-      if (response['ok'] == true) {
-        await _loadMessages();
-      } else {
-        if (caption.isNotEmpty) {
-          _controller.text = caption;
-        }
-        _showMessageError(_apiService.readErrorMessage(response));
-      }
-    } catch (error, stackTrace) {
-      log(
-        "Erreur lors de l'envoi de la photo",
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      if (caption.isNotEmpty) {
-        _controller.text = caption;
-      }
       _showMessageError(_genericErrorMessage);
     } finally {
       if (!mounted) return;
@@ -478,44 +422,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  Future<void> _pickAttachment() async {
-    _hideEmojiPicker();
-    try {
-      final image = await _imagePicker.pickImage(source: ImageSource.gallery);
-      if (!mounted || image == null) return;
-      await _sendImageMessage(image);
-    } catch (error, stackTrace) {
-      log(
-        'Erreur galerie',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      _showMessageError(_genericErrorMessage);
-    }
-  }
-
-  Future<void> _openCamera() async {
-    _hideEmojiPicker();
-    try {
-      final image = await _imagePicker.pickImage(source: ImageSource.camera);
-      if (!mounted || image == null) return;
-      await _sendImageMessage(image);
-    } catch (error, stackTrace) {
-      log(
-        'Erreur caméra',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Une erreur est survenue. Veuillez réessayer.'),
-        ),
-      );
-    }
-  }
-
   Future<int?> _readCurrentUserId() async {
     final token = await _apiService.getToken();
     return decodeJwtUserId(token);
@@ -556,7 +462,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   String _statusLabel() {
     if (_isTypingRemote) {
-      return 'écrit...';
+      return 'Écrit...';
     }
     if (_estConnecte) {
       return 'En ligne';

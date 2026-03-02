@@ -14,8 +14,8 @@ class NotificationSound {
     }
     _lastPlayedAt = now;
     await _player.play(
-      AssetSource('audio/samsung.mp3'),
-      volume: 0.8,
+      AssetSource('audio/discord.mp3'),
+      volume: 1,
     );
   }
 }

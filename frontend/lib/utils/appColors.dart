@@ -5,7 +5,7 @@ import '../styles/appTheme.dart';
 class AppColors {
   AppColors._();
 
-  static const Color primary = AppTheme.brandMid;
+  static const Color primary = Color.fromARGB(255, 145, 255, 0);
   static const Color lightPrimary = AppTheme.accent;
   static const Color background = AppTheme.brandLight;
   static const Color accent = AppTheme.brandDark;

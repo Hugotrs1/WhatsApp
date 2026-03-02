@@ -565,8 +565,7 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   void _updateCanSubmit() {
-    final hasNames = _firstNameController.text.trim().isNotEmpty &&
-        _lastNameController.text.trim().isNotEmpty;
+    final hasNames = _firstNameController.text.trim().isNotEmpty && _lastNameController.text.trim().isNotEmpty;
     final hasPhone = _phoneController.text.trim().isNotEmpty;
     final password = _passwordController.text.trim();
     final confirm = _confirmController.text.trim();
