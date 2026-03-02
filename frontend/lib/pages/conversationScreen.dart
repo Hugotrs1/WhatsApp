@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../api/apiService.dart';
 import '../models/chat.dart';
 import '../styles/styles.dart';
+import '../utils/notificationFeedback.dart';
 import '../utils/utils.dart';
 import '../widget/avatar.dart';
 import '../widget/messageView.dart';
@@ -35,6 +36,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   int? _currentUserId;
   int _lastMessageId = 0;
   Timer? _pollingTimer;
+  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
@@ -175,8 +177,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         itemCount: _messages.length,
         itemBuilder: (context, index) {
           final message = _messages[index];
-          return MessageBubble(
-            message: message,
+          if (!message.isMine) {
+            return MessageBubble(message: message);
+          }
+          return Dismissible(
+            key: ValueKey('message-${message.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              color: Colors.red.shade100,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const Icon(Icons.delete_outline, color: Colors.red),
+            ),
+            confirmDismiss: (_) => _confirmDelete(message),
+            onDismissed: (_) {
+              if (!mounted) return;
+              setState(() {
+                _messages.removeWhere((m) => m.id == message.id);
+              });
+            },
+            child: MessageBubble(message: message),
           );
         },
       ),
@@ -229,6 +249,42 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  Future<bool> _confirmDelete(ChatMessage message) async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Supprimer le message ?'),
+            content: const Text('Cette action est definitive.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Annuler'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Supprimer'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) return false;
+    try {
+      final response = await _apiService.deleteMessage(id: message.id);
+      if (!mounted) return false;
+      if (response['ok'] == true) {
+        return true;
+      }
+      _showMessageError(_apiService.readErrorMessage(response));
+      return false;
+    } catch (_) {
+      if (mounted) {
+        _showMessageError(_genericErrorMessage);
+      }
+      return false;
+    }
+  }
+
   Future<void> _loadMessages({bool reset = false}) async {
     if (_isFetching) return;
     _isFetching = true;
@@ -239,6 +295,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           _loadError = null;
           _lastMessageId = 0;
           _messages.clear();
+          _hasLoadedOnce = false;
         });
       }
 
@@ -253,6 +310,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final data = response['data'];
         final parsed = _parseMessages(data, _currentUserId);
         final newLastId = _maxMessageId(data);
+        final hasIncoming =
+            !reset && _hasLoadedOnce && parsed.any((message) => !message.isMine);
         setState(() {
           _loadError = null;
           if (reset) {
@@ -267,6 +326,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           }
           _isLoading = false;
         });
+        if (hasIncoming) {
+          NotificationFeedback.play();
+        }
+        _hasLoadedOnce = true;
         if (parsed.isNotEmpty) {
           Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
         }

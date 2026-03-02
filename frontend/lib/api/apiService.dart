@@ -209,6 +209,10 @@ class ApiService {
     );
   }
 
+  Future<Map<String, dynamic>> listFriends() {
+    return _request('GET', '/api/friends');
+  }
+
   Future<Map<String, dynamic>> getConversations() {
     return _request('GET', '/api/conversations');
   }
@@ -267,6 +271,10 @@ class ApiService {
         'content': content,
       },
     );
+  }
+
+  Future<Map<String, dynamic>> deleteMessage({required String id}) {
+    return _request('DELETE', '/api/messages/$id');
   }
 
   Future<Map<String, dynamic>> listAllUsers({int limit = 100}) {

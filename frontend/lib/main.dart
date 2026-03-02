@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:whatsapp/data/storage/stockageSecurise.dart';
 
 import 'api/apiService.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
   } catch (error) {
     debugPrint('Optional .env not loaded: $error');
   }
+  await _requestNotificationPermission();
   final secureStorage = SecureStorage();
   final tokenStorage = TokenStorage(secureStorage);
   final credentialsStorage = CredentialsStorage(secureStorage);
@@ -30,6 +32,13 @@ Future<void> main() async {
     credentialsStorage: credentialsStorage,
   );
   runApp(WhatsappApp(authService: authService));
+}
+
+Future<void> _requestNotificationPermission() async {
+  final status = await Permission.notification.status;
+  if (!status.isGranted) {
+    await Permission.notification.request();
+  }
 }
 
 class WhatsappApp extends StatelessWidget {

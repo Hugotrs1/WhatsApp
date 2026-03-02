@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:whatsapp/utils/utils.dart';
 
 import 'package:whatsapp/models/chat.dart';
-import 'package:whatsapp/utils/appColors.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -15,8 +14,8 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMine = message.isMine;
-    final bubbleColor = isMine ? AppColors.primary : Colors.white;
-    final textColor = isMine ? Colors.white : Colors.grey.shade900;
+    final bubbleColor = isMine ? const Color(0xFFE6F7F1) : Colors.white;
+    final textColor = Colors.grey.shade900;
     final content = message.content.trim();
 
     return Align(
@@ -55,7 +54,7 @@ class MessageBubble extends StatelessWidget {
             Text(
               formatTemps(message.time),
               style: TextStyle(
-                color: isMine ? Colors.white70 : Colors.grey.shade700,
+                color: Colors.grey.shade700,
                 fontSize: 11,
               ),
             ),
