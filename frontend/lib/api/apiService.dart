@@ -6,9 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
-import '../data/storage/stockageConfidentiel.dart';
-import '../data/storage/stockageSecurise.dart';
-import '../data/storage/stockageToken.dart';
+import '../data/storage/credentialsStorage.dart';
+import '../data/storage/secureStorage.dart';
+import '../data/storage/tokenStorage.dart';
 
 const int _jsonIsolateThreshold = 20000;
 
@@ -43,7 +43,7 @@ class ApiService {
         _credentialsStorage = credentialsStorage;
 
   static const String _genericErrorMessage =
-      'Une erreur est survenue. Veuillez réessayer.';
+      'Something went wrong. Please try again.';
 
   final String baseUrl;
   final http.Client _client;
@@ -240,7 +240,7 @@ class ApiService {
   Future<Map<String, dynamic>> getMyStatus() async {
     final me = await _tokenStorage.readUserId();
     if (me == null) {
-      return _error(status: 401, code: 'unauthorized', message: 'Non authentifié.');
+      return _error(status: 401, code: 'unauthorized', message: 'Not authenticated.');
     }
     return getStatusForUser(userId: me.toString());
   }
@@ -398,24 +398,24 @@ class ApiService {
     }
     switch (status) {
       case 400:
-        return 'Requête invalide.';
+        return 'Invalid request.';
       case 401:
-        return 'Authentification requise.';
+        return 'Authentication required.';
       case 403:
-        return 'Accès refusé.';
+        return 'Access denied.';
       case 404:
-        return 'Ressource introuvable.';
+        return 'Resource not found.';
       case 408:
-        return 'Délai dépassé. Réessaie.';
+        return 'Request timed out. Try again.';
       case 413:
-        return 'Fichier trop volumineux. Réduis la taille du fichier.';
+        return 'File too large. Reduce the file size.';
       case 429:
-        return 'Trop de requêtes. Réessaie plus tard.';
+        return 'Too many requests. Try again later.';
       case 500:
       case 502:
       case 503:
       case 504:
-        return 'Erreur serveur. Réessaie plus tard.';
+        return 'Server error. Try again later.';
       default:
         return _genericErrorMessage;
     }
@@ -495,9 +495,9 @@ class ApiService {
     }
     switch (code) {
       case 'required':
-        return '$label requis.';
+        return '$label is required.';
       case 'format':
-        return '$label invalide.';
+        return '$label is invalid.';
       default:
         return null;
     }
@@ -506,13 +506,13 @@ class ApiService {
   String? _fieldLabel(String field) {
     switch (field) {
       case 'phone':
-        return 'Téléphone';
+        return 'Phone';
       case 'password':
-        return 'Mot de passe';
+        return 'Password';
       case 'first_name':
-        return 'Prénom';
+        return 'First name';
       case 'last_name':
-        return 'Nom';
+        return 'Last name';
       default:
         return null;
     }
@@ -524,7 +524,7 @@ class ApiService {
     final normalized = trimmed.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (normalized.contains('413 Request Entity Too Large') ||
         normalized.contains('Request Entity Too Large')) {
-      return 'Fichier trop volumineux. Réduis la taille du fichier.';
+      return 'File too large. Reduce the file size.';
     }
     if (RegExp(r'<[^>]+>').hasMatch(normalized)) {
       return null;

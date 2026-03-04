@@ -18,7 +18,7 @@ class AddContactPage extends StatefulWidget {
 
 class _AddContactPageState extends State<AddContactPage> {
   static const Duration _debounceDelay = Duration(milliseconds: 350);
-  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+  static const String _genericErrorMessage = 'Something went wrong. Please try again.';
 
   late final ApiService _apiService;
   final TextEditingController _searchController = TextEditingController();
@@ -52,12 +52,12 @@ class _AddContactPageState extends State<AddContactPage> {
       padding: WhatsAppStyles.pagePadding,
       children: [
         Text(
-          'Rechercher un ami',
+          'Find a friend',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
         Text(
-          'Tape un numéro de téléphone pour trouver ton ami et lui envoyer une invitation.',
+          'Type a phone number to find your friend and send an invitation.',
           style: WhatsAppStyles.mutedBodyStyle(context),
         ),
         const SizedBox(height: 20),
@@ -65,7 +65,7 @@ class _AddContactPageState extends State<AddContactPage> {
           controller: _searchController,
           keyboardType: TextInputType.phone,
           decoration: WhatsAppStyles.searchFieldDecoration(
-            hintText: 'Rechercher par numéro',
+            hintText: 'Search by number',
           ),
         ),
         const SizedBox(height: 12),
@@ -73,7 +73,7 @@ class _AddContactPageState extends State<AddContactPage> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: _isLoading ? null : _loadAllUsers,
-            child: const Text('Afficher tout le monde'),
+            child: const Text('Show everyone'),
           ),
         ),
         const SizedBox(height: 16),
@@ -96,8 +96,8 @@ class _AddContactPageState extends State<AddContactPage> {
     if (_results.isEmpty) {
       final showHint = _searchController.text.trim().length < 2 && !_isShowingAll;
       final message = _isShowingAll
-          ? 'Aucun utilisateur.'
-          : (showHint ? 'Commence a taper un numero.' : 'Aucun utilisateur trouve.');
+          ? 'No users.'
+          : (showHint ? 'Start typing a number.' : 'No users found.');
       return [
         const SizedBox(height: 40),
         Center(
@@ -133,7 +133,7 @@ class _AddContactPageState extends State<AddContactPage> {
     final isFriend = item.isFriend;
     if (isFriend) {
       return Chip(
-        label: const Text('Ami'),
+        label: const Text('Friend'),
         backgroundColor: Colors.green.shade50,
         labelStyle: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.w700),
       );

@@ -15,14 +15,14 @@ class ChatMessage {
   final DateTime time;
   final bool isMine;
 
-  static ChatMessage? fromApi(Map<String, dynamic> map, {required String chatTitle,int? currentUserId}) {
+  static ChatMessage? fromApi(Map<String, dynamic> map, {required String chatTitle, int? currentUserId}) {
     final content = map['content']?.toString() ?? '';
     if (content.trim().isEmpty) return null;
     final senderId = parseInt(map['sender_id']);
     final isMine = currentUserId != null && senderId == currentUserId;
     return ChatMessage(
       id: map['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      sender: isMine ? 'Moi' : chatTitle,
+      sender: isMine ? 'Me' : chatTitle,
       content: content,
       time: parseDateTime(map['created_at']),
       isMine: isMine,
@@ -47,7 +47,7 @@ class Chat {
 
   static String buildLastMessage(String content) {
     final trimmed = content.trim();
-    return trimmed.isEmpty ? 'Aucun message' : trimmed;
+    return trimmed.isEmpty ? 'No messages' : trimmed;
   }
 
   factory Chat.fromConversation(Map<String, dynamic> map) {
@@ -74,7 +74,7 @@ class Chat {
       lastName: data['last_name']?.toString(),
     );
     final lastMessageData = data['last_message'];
-    String lastMessage = 'Envoyer un premier message';
+    String lastMessage = 'Send the first message';
     DateTime lastActivity = DateTime.now();
     if (lastMessageData is Map<String, dynamic>) {
       final content = lastMessageData['content']?.toString() ?? '';

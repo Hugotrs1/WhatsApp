@@ -21,7 +21,7 @@ class ChatDetailPage extends StatefulWidget {
 }
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
-  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+  static const String _genericErrorMessage = 'Something went wrong. Please try again.';
 
   late final ApiService _apiService;
   final TextEditingController _controller = TextEditingController();
@@ -30,7 +30,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isLoading = true;
   bool _isFetching = false;
   bool _isSending = false;
-  bool _estConnecte = false;
+  bool _isOnline = false;
   DateTime? _lastSeen;
   String? _loadError;
   int? _currentUserId;
@@ -42,7 +42,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void initState() {
     super.initState();
     _apiService = ApiService();
-    _loadConnectionStatus();
+    _loadOnlineStatus();
     _loadMessages(reset: true);
     _pollingTimer = Timer.periodic(const Duration(seconds: 1), (_) => _pollUpdates());
   }
@@ -145,7 +145,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             const SizedBox(height: 180),
             Center(
               child: Text(
-                _loadError ?? 'Aucun message pour le moment.',
+                _loadError ?? 'No messages yet.',
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontWeight: FontWeight.w600,
@@ -159,7 +159,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 child: Center(
                   child: TextButton(
                     onPressed: () => _loadMessages(reset: true),
-                    child: const Text('Réessayer'),
+                    child: const Text('Retry'),
                   ),
                 ),
               ),
@@ -211,7 +211,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final text = _controller.text.trim();
     if (_isSending) return;
     if (text.isEmpty) {
-      _showMessageError("Merci d'écrire un message.");
+      _showMessageError('Please enter a message.');
       return;
     }
     _controller.clear();
@@ -234,7 +234,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       }
     } catch (error, stackTrace) {
       log(
-        "Erreur lors de l'envoi du message",
+        'Error sending message',
         error: error,
         stackTrace: stackTrace,
       );
@@ -253,16 +253,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Supprimer le message ?'),
-            content: const Text('Cette action est definitive.'),
+            title: const Text('Delete message?'),
+            content: const Text('This action cannot be undone.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Annuler'),
+                child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Supprimer'),
+                child: const Text('Delete'),
               ),
             ],
           ),
@@ -341,7 +341,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       }
     } catch (error, stackTrace) {
       log(
-        'Erreur lors du chargement des messages',
+        'Error loading messages',
         error: error,
         stackTrace: stackTrace,
       );
@@ -357,10 +357,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Future<void> _pollUpdates() async {
     await _loadMessages();
-    await _loadConnectionStatus();
+    await _loadOnlineStatus();
   }
 
-  Future<void> _loadConnectionStatus() async {
+  Future<void> _loadOnlineStatus() async {
     try {
       final response = await _apiService.getStatusForUser(userId: widget.chat.id);
       if (!mounted) return;
@@ -370,7 +370,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final lastSeenRaw = data is Map ? data['last_seen']?.toString() : null;
         final lastSeen = tryParseDateTime(lastSeenRaw);
         setState(() {
-          _estConnecte = !appearOffline;
+          _isOnline = !appearOffline;
           _lastSeen = lastSeen;
         });
       }
@@ -419,13 +419,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   String _statusLabel() {
-    if (_estConnecte) {
-      return 'En ligne';
+    if (_isOnline) {
+      return 'Online';
     }
     if (_lastSeen != null) {
       return formatLastSeen(_lastSeen!);
     }
-    return 'Hors ligne';
+    return 'Offline';
   }
 
   void _showMessageError(String message) {

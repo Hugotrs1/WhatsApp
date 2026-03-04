@@ -1,8 +1,8 @@
 // ignore_for_file: file_names
 import '../../api/apiService.dart';
-import '../../data/storage/stockageConfidentiel.dart';
-import '../../data/storage/stockageToken.dart';
-import 'authModele.dart';
+import '../../data/storage/credentialsStorage.dart';
+import '../../data/storage/tokenStorage.dart';
+import 'authModel.dart';
 
 class AuthService {
   AuthService({
@@ -51,7 +51,7 @@ class AuthService {
       return const AuthResult.success();
     }
     if (response['ok'] == true && token == null) {
-      return const AuthResult.failure('Connexion impossible. Token manquant.');
+      return const AuthResult.failure('Login failed. Missing token.');
     }
     if (response['status'] == 401 || response['status'] == 422) {
       await _tokenStorage.clearToken();
@@ -76,7 +76,7 @@ class AuthService {
       password: password.trim(),
     );
     if (response['ok'] == true) {
-      return const AuthResult.success('Compte créé. Connecte-toi.');
+      return const AuthResult.success('Account created. Please sign in.');
     }
     return AuthResult.failure(_apiService.readErrorMessage(response));
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
-import '../models/profileUser.dart';
+import '../models/userProfile.dart';
 import '../styles/styles.dart';
 import '../widget/avatar.dart';
 
@@ -14,7 +14,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late final ApiService _apiService;
-  bool _estConnecte = true;
+  bool _isOnline = true;
   bool _isLoadingStatus = true;
   String? _statusError;
   String? _displayName;
@@ -24,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _apiService = ApiService();
-    _loadConnectionStatus();
+    _loadOnlineStatus();
     _loadProfile();
   }
 
@@ -36,7 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = _displayName?.trim().isNotEmpty == true ? _displayName!.trim() : 'Utilisateur';
+    final displayName = _displayName?.trim().isNotEmpty == true ? _displayName!.trim() : 'User';
     final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
     final phone = _phoneMasked ?? '';
 
@@ -74,21 +74,20 @@ class _SettingsPageState extends State<SettingsPage> {
         const Divider(height: 1),
         SwitchListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-          value: _estConnecte,
-          onChanged: _isLoadingStatus ? null : _toggleConnectionStatus,
+          value: _isOnline,
+          onChanged: _isLoadingStatus ? null : _toggleOnlineStatus,
           activeThumbColor: WhatsAppStyles.primaryColor,
-          title: const Text('En ligne', style: TextStyle(fontWeight: FontWeight.w700)),
+          title: const Text('Online', style: TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(
-            _statusError ?? (_estConnecte ? 'Statut visible' : 'Statut masqué'),
+            _statusError ?? (_isOnline ? 'Status visible' : 'Status hidden'),
             style: TextStyle(color: _statusError == null ? Colors.grey : Colors.red.shade700),
           ),
         ),
         Divider(height: 1, color: WhatsAppStyles.dividerColor),
-       
         const SizedBox(height: 24),
         Center(
           child: Text(
-            'CESI • 2026',
+            'CESI - 2026',
             style: TextStyle(color: Colors.grey.shade600),
           ),
         ),
@@ -97,7 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _loadConnectionStatus() async {
+  Future<void> _loadOnlineStatus() async {
     try {
       final response = await _apiService.getMyStatus();
       if (!mounted) return;
@@ -105,7 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final data = response['data'];
         final appearOffline = data is Map && data['appear_offline'] == true;
         setState(() {
-          _estConnecte = !appearOffline;
+          _isOnline = !appearOffline;
           _isLoadingStatus = false;
           _statusError = null;
         });
@@ -119,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!mounted) return;
       setState(() {
         _isLoadingStatus = false;
-        _statusError = 'Impossible de charger le statut';
+        _statusError = 'Unable to load status';
       });
     }
   }
@@ -130,7 +129,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (userId == null) {
         if (!mounted) return;
         setState(() {
-          _displayName = 'Utilisateur';
+          _displayName = 'User';
           _phoneMasked = '';
         });
         return;
@@ -153,9 +152,9 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _toggleConnectionStatus(bool value) async {
+  Future<void> _toggleOnlineStatus(bool value) async {
     setState(() {
-      _estConnecte = value;
+      _isOnline = value;
       _statusError = null;
       _isLoadingStatus = true;
     });

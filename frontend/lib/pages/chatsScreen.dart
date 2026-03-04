@@ -20,8 +20,7 @@ class ChatsPage extends StatefulWidget {
 }
 
 class _ChatsPageState extends State<ChatsPage> {
-  static const String _genericErrorMessage =
-      'Une erreur est survenue. Veuillez réessayer.';
+  static const String _genericErrorMessage = 'Something went wrong. Please try again.';
   static const Duration _searchDebounceDelay = Duration(milliseconds: 320);
 
   late final ApiService _apiService;
@@ -72,7 +71,7 @@ class _ChatsPageState extends State<ChatsPage> {
           child: TextField(
             controller: _searchController,
             decoration: WhatsAppStyles.searchFieldDecoration(
-              hintText: 'Rechercher un ami',
+              hintText: 'Search friends',
             ),
             onChanged: (_) => _onQueryChanged(),
           ),
@@ -102,7 +101,7 @@ class _ChatsPageState extends State<ChatsPage> {
         const SizedBox(height: 120),
         Center(
           child: Text(
-            _loadError ?? 'Aucune conversation pour le moment.',
+            _loadError ?? 'No conversations yet.',
             style: TextStyle(
               color: Colors.grey.shade600,
               fontWeight: FontWeight.w600,
@@ -116,7 +115,7 @@ class _ChatsPageState extends State<ChatsPage> {
             child: Center(
               child: TextButton(
                 onPressed: _loadConversations,
-                child: const Text('Réessayer'),
+                child: const Text('Retry'),
               ),
             ),
           ),
@@ -166,7 +165,7 @@ class _ChatsPageState extends State<ChatsPage> {
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
-            'Aucun ami trouve.',
+            'No friends found.',
             style: WhatsAppStyles.mutedBodyStyle(context),
           ),
         ),
@@ -198,7 +197,7 @@ class _ChatsPageState extends State<ChatsPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
-              'Amis',
+              'Friends',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
@@ -260,7 +259,7 @@ class _ChatsPageState extends State<ChatsPage> {
       }
     } catch (error, stackTrace) {
       log(
-        'Erreur lors du chargement des conversations',
+        'Error loading conversations',
         error: error,
         stackTrace: stackTrace,
       );
@@ -423,7 +422,7 @@ class _ChatsPageState extends State<ChatsPage> {
         });
       }
     } catch (error, stackTrace) {
-      log('Erreur chargement amis', error: error, stackTrace: stackTrace);
+      log('Error loading friends', error: error, stackTrace: stackTrace);
       if (!mounted) return;
       setState(() {
         _isFriendsLoading = false;

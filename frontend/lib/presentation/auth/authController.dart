@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/auth/authModele.dart';
+import '../../domain/auth/authModel.dart';
 import '../../domain/auth/authService.dart';
 
 class AuthController extends ChangeNotifier {

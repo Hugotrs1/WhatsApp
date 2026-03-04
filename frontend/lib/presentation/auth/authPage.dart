@@ -99,7 +99,7 @@ class _AuthHeader extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Text(
-          'Discute vite, clair, et sans effort.',
+          'Chat fast, clearly, and effortlessly.',
           style: subtitleStyle,
         ),
       ],
@@ -144,8 +144,8 @@ class _AuthCard extends StatelessWidget {
             indicatorColor: AppTheme.accent,
             labelStyle: tabLabelStyle,
             tabs: const [
-              Tab(text: 'Connexion'),
-              Tab(text: 'Inscription'),
+              Tab(text: 'Login'),
+              Tab(text: 'Register'),
             ],
           ),
           const SizedBox(height: 16),
@@ -254,13 +254,13 @@ class _LoginFormState extends State<LoginForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Heureux de te revoir', style: titleStyle),
+            Text('Welcome back', style: titleStyle),
             const SizedBox(height: 6),
-            Text('Entre tes identifiants pour continuer.', style: subtitleStyle),
+            Text('Enter your credentials to continue.', style: subtitleStyle),
             const SizedBox(height: 18),
             _AuthTextField(
               controller: _phoneController,
-              label: 'Téléphone',
+              label: 'Phone',
               keyboardType: TextInputType.phone,
               inputFormatters: _phoneFormatters,
               icon: Icons.phone_iphone_outlined,
@@ -272,7 +272,7 @@ class _LoginFormState extends State<LoginForm> {
               builder: (context, isVisible, _) {
                 return _AuthTextField(
                   controller: _passwordController,
-                  label: 'Mot de passe',
+                  label: 'Password',
                   obscureText: !isVisible,
                   isPassword: true,
                   icon: Icons.lock_outline,
@@ -280,7 +280,7 @@ class _LoginFormState extends State<LoginForm> {
                     isVisible: isVisible,
                     onPressed: () => _showPassword.value = !isVisible,
                   ),
-                  validator: (value) => Validators.requiredText(value, 'le mot de passe'),
+                  validator: (value) => Validators.requiredText(value, 'password'),
                 );
               },
             ),
@@ -301,7 +301,7 @@ class _LoginFormState extends State<LoginForm> {
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
                   activeColor: AppTheme.accent,
-                  title: Text('Se souvenir de moi', style: checkboxStyle),
+                  title: Text('Remember me', style: checkboxStyle),
                 );
               },
             ),
@@ -319,7 +319,7 @@ class _LoginFormState extends State<LoginForm> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Se connecter'),
+                        : const Text('Sign in'),
                   ),
                 );
               },
@@ -334,7 +334,7 @@ class _LoginFormState extends State<LoginForm> {
     if (_isLoading.value) return;
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
-      _showSnackBar('Merci de remplir les champs requis.');
+      _showSnackBar('Please fill in the required fields.');
       return;
     }
     _isLoading.value = true;
@@ -346,7 +346,7 @@ class _LoginFormState extends State<LoginForm> {
       );
       if (!mounted) return;
       if (!result.isSuccess) {
-        await _showErrorDialog(result.message ?? 'Connexion impossible.');
+        await _showErrorDialog(result.message ?? 'Login failed.');
       }
     } finally {
       if (mounted) {
@@ -355,7 +355,7 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
-  Future<void> _showErrorDialog(String message, {String title = 'Connexion impossible'}) async {
+  Future<void> _showErrorDialog(String message, {String title = 'Login failed'}) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -466,29 +466,29 @@ class _RegisterFormState extends State<RegisterForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Créer un compte', style: titleStyle),
+            Text('Create account', style: titleStyle),
             const SizedBox(height: 6),
-            Text('Rejoins tes amis en quelques secondes.', style: subtitleStyle),
+            Text('Join your friends in seconds.', style: subtitleStyle),
             const SizedBox(height: 18),
             _AuthTextField(
               controller: _firstNameController,
-              label: 'Prénom',
+              label: 'First name',
               textCapitalization: TextCapitalization.words,
               icon: Icons.person_outline,
-              validator: (value) => Validators.requiredText(value, 'le prénom'),
+              validator: (value) => Validators.requiredText(value, 'first name'),
             ),
             const SizedBox(height: 14),
             _AuthTextField(
               controller: _lastNameController,
-              label: 'Nom',
+              label: 'Last name',
               textCapitalization: TextCapitalization.words,
               icon: Icons.badge_outlined,
-              validator: (value) => Validators.requiredText(value, 'le nom'),
+              validator: (value) => Validators.requiredText(value, 'last name'),
             ),
             const SizedBox(height: 14),
             _AuthTextField(
               controller: _phoneController,
-              label: 'Téléphone',
+              label: 'Phone',
               keyboardType: TextInputType.phone,
               inputFormatters: _phoneFormatters,
               icon: Icons.phone_iphone_outlined,
@@ -500,7 +500,7 @@ class _RegisterFormState extends State<RegisterForm> {
               builder: (context, isVisible, _) {
                 return _AuthTextField(
                   controller: _passwordController,
-                  label: 'Mot de passe',
+                  label: 'Password',
                   obscureText: !isVisible,
                   isPassword: true,
                   icon: Icons.lock_outline,
@@ -508,7 +508,7 @@ class _RegisterFormState extends State<RegisterForm> {
                     isVisible: isVisible,
                     onPressed: () => _showPassword.value = !isVisible,
                   ),
-                  validator: (value) => Validators.requiredText(value, 'le mot de passe'),
+                  validator: (value) => Validators.requiredText(value, 'password'),
                 );
               },
             ),
@@ -518,7 +518,7 @@ class _RegisterFormState extends State<RegisterForm> {
               builder: (context, isVisible, _) {
                 return _AuthTextField(
                   controller: _confirmController,
-                  label: 'Confirmer le mot de passe',
+                  label: 'Confirm password',
                   obscureText: !isVisible,
                   isPassword: true,
                   icon: Icons.check_circle_outline,
@@ -551,7 +551,7 @@ class _RegisterFormState extends State<RegisterForm> {
                                 height: 22,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Créer un compte'),
+                            : const Text('Create account'),
                       ),
                     );
                   },
@@ -577,11 +577,11 @@ class _RegisterFormState extends State<RegisterForm> {
     if (_isLoading.value) return;
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
-      _showSnackBar('Merci de corriger les erreurs.');
+      _showSnackBar('Please fix the errors.');
       return;
     }
     if (!_canSubmit.value) {
-      _showSnackBar('Les mots de passe doivent être identiques.');
+      _showSnackBar('Passwords must match.');
       return;
     }
     _isLoading.value = true;
@@ -595,10 +595,10 @@ class _RegisterFormState extends State<RegisterForm> {
       if (!mounted) return;
       if (result.isSuccess) {
         _clearFields();
-        _showSnackBar(result.message ?? 'Compte créé. Connecte-toi.');
+        _showSnackBar(result.message ?? 'Account created. Please sign in.');
         DefaultTabController.of(context).animateTo(0);
       } else {
-        await _showErrorDialog(result.message ?? 'Inscription impossible.');
+        await _showErrorDialog(result.message ?? 'Registration failed.');
       }
     } finally {
       if (mounted) {
@@ -616,7 +616,7 @@ class _RegisterFormState extends State<RegisterForm> {
     _updateCanSubmit();
   }
 
-  Future<void> _showErrorDialog(String message, {String title = 'Inscription impossible'}) async {
+  Future<void> _showErrorDialog(String message, {String title = 'Registration failed'}) async {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -709,7 +709,7 @@ class _PasswordToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: onPressed,
-      tooltip: isVisible ? 'Masquer' : 'Afficher',
+      tooltip: isVisible ? 'Hide' : 'Show',
       icon: Icon(
         isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
       ),

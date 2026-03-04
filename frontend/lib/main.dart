@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:whatsapp/data/storage/stockageSecurise.dart';
+import 'package:whatsapp/data/storage/secureStorage.dart';
 
 import 'api/apiService.dart';
-import 'data/storage/stockageConfidentiel.dart';
-import 'data/storage/stockageToken.dart';
+import 'data/storage/credentialsStorage.dart';
+import 'data/storage/tokenStorage.dart';
 import 'domain/auth/authService.dart';
 import 'presentation/bootstrap/startup.dart';
 import 'styles/appTheme.dart';

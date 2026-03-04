@@ -5,7 +5,7 @@ class Validators {
 
   static String? requiredText(String? value, String label) {
     if (value == null || value.trim().isEmpty) {
-      return 'Merci de renseigner $label.';
+      return 'Please enter $label.';
     }
     return null;
   }
@@ -13,24 +13,24 @@ class Validators {
   static String? phone(String? value) {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) {
-      return 'Merci de renseigner le téléphone.';
+      return 'Please enter a phone number.';
     }
     final normalized = ApiService.normalizePhone(trimmed);
     if (!RegExp(r'^\d+$').hasMatch(normalized)) {
-      return 'Numéro invalide.';
+      return 'Invalid number.';
     }
     if (normalized.length != 10) {
-      return 'Numéro invalide.';
+      return 'Invalid number.';
     }
     return null;
   }
 
   static String? confirmPassword(String? value, String password) {
     if (value == null || value.trim().isEmpty) {
-      return 'Merci de confirmer le mot de passe.';
+      return 'Please confirm the password.';
     }
     if (value.trim() != password.trim()) {
-      return 'Les mots de passe ne correspondent pas.';
+      return 'Passwords do not match.';
     }
     return null;
   }

@@ -62,7 +62,7 @@ class ChatListTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  formatTemps(chat.lastActivity),
+                  formatTime(chat.lastActivity),
                   style: TextStyle(
                     fontSize: 12,
                     color: hasUnread ? AppColors.unread : Colors.grey.shade600,

@@ -1,5 +1,5 @@
 import '../utils/utils.dart';
-import 'demandeAmi.dart';
+import 'friendRequest.dart';
 
 class UserRelation {
   const UserRelation({

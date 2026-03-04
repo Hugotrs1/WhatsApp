@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
-import '../models/demandeAmi.dart';
+import '../models/friendRequest.dart';
 import '../presentation/auth/authController.dart';
 import '../styles/styles.dart';
 import 'addScreen.dart';
-import 'messagerieScreen.dart';
-import 'compteScreen.dart';
+import 'chatsScreen.dart';
+import 'settingsScreen.dart';
 import 'detailsUserScreen.dart';
 
 class HomePage extends StatelessWidget {
@@ -59,12 +59,16 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_AppBarTitle(_currentIndex), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600), textAlign: TextAlign.center,),
+        title: Text(
+          _appBarTitle(_currentIndex),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          textAlign: TextAlign.center,
+        ),
         actions: [
           IconButton(
             onPressed: _handleLogout,
             icon: const Icon(Icons.logout),
-            tooltip: 'Déconnexion',
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -101,21 +105,21 @@ class _MainScaffoldState extends State<MainScaffold> {
           _buildAddItem(),
           const BottomNavigationBarItem(
             icon: Icon(Icons.account_circle),
-            label: 'Compte',
+            label: 'Settings',
           ),
         ],
       ),
     );
   }
 
-  String _AppBarTitle(int index) {
+  String _appBarTitle(int index) {
     switch (index) {
       case 0:
         return 'Messages';
       case 1:
-        return 'Ajout de contact';
+        return 'Add contact';
       case 2:
-        return 'Compte';
+        return 'Settings';
       default:
         return 'Messages';
     }
@@ -130,7 +134,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha : 0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -142,7 +146,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     return BottomNavigationBarItem(
       icon: icon,
       activeIcon: icon,
-      label: 'Ajouter',
+      label: 'Add',
     );
   }
 
@@ -224,7 +228,7 @@ class _IncomingRequestBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = request.requester?.displayName ?? 'Quelqu\'un';
+    final name = request.requester?.displayName ?? 'Someone';
     final extra = pendingCount > 1 ? ' (+${pendingCount - 1})' : '';
     return Container(
       width: double.infinity,
@@ -244,11 +248,11 @@ class _IncomingRequestBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '$name souhaite t\'ajouter$extra',
+                  '$name wants to add you$extra',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              TextButton(onPressed: onView, child: const Text('Voir')),
+              TextButton(onPressed: onView, child: const Text('View')),
             ],
           ),
           const SizedBox(height: 6),
@@ -263,12 +267,12 @@ class _IncomingRequestBanner extends StatelessWidget {
                   minimumSize: const Size(0, 40),
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 ),
-                child: const Text('Confirmer'),
+                child: const Text('Accept'),
               ),
               const SizedBox(width: 8),
               TextButton(
                 onPressed: onDecline,
-                child: const Text('Décliner'),
+                child: const Text('Decline'),
               ),
             ],
           ),
@@ -276,5 +280,4 @@ class _IncomingRequestBanner extends StatelessWidget {
       ),
     );
   }
-
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../api/apiService.dart';
 import '../models/chat.dart';
-import '../models/demandeAmi.dart';
-import '../models/profileUser.dart';
+import '../models/friendRequest.dart';
+import '../models/userProfile.dart';
 import '../styles/styles.dart';
 import 'conversationScreen.dart';
 
@@ -17,7 +17,7 @@ class UserDetailPage extends StatefulWidget {
 }
 
 class _UserDetailPageState extends State<UserDetailPage> {
-  static const String _genericErrorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+  static const String _genericErrorMessage = 'Something went wrong. Please try again.';
 
   late final ApiService _apiService;
   bool _isLoading = true;
@@ -57,7 +57,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: const Text('Profile'),
       ),
       body: content,
     );
@@ -92,7 +92,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    fullName.isEmpty ? 'Utilisateur' : fullName,
+                    fullName.isEmpty ? 'User' : fullName,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
@@ -122,19 +122,19 @@ class _UserDetailPageState extends State<UserDetailPage> {
     String label;
     Color color;
     if (isMe) {
-      label = 'C\'est vous';
+      label = 'This is you';
       color = Colors.grey.shade600;
     } else if (isFriend) {
-      label = 'Vous êtes amis';
+      label = 'You are friends';
       color = Colors.green.shade700;
     } else if (incoming?.isPending == true) {
-      label = 'Souhaite vous ajouter';
+      label = 'Wants to add you';
       color = Colors.orange.shade700;
     } else if (outgoing?.isPending == true) {
-      label = 'Demande envoyée';
+      label = 'Request sent';
       color = Colors.blue.shade700;
     } else {
-      label = 'Pas encore amis';
+      label = 'Not friends yet';
       color = Colors.grey.shade700;
     }
 
@@ -175,7 +175,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ElevatedButton.icon(
             onPressed: _isActionRunning ? null : _openChat,
             icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Envoyer un message'),
+            label: const Text('Send message'),
           )
         else if (hasIncoming)
           Row(
@@ -183,14 +183,14 @@ class _UserDetailPageState extends State<UserDetailPage> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: _isActionRunning ? null : () => _respondToRequest(incoming?.id, true),
-                  child: const Text('Accepter'),
+                  child: const Text('Accept'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
                   onPressed: _isActionRunning ? null : () => _respondToRequest(incoming?.id, false),
-                  child: const Text('Décliner'),
+                  child: const Text('Decline'),
                 ),
               ),
             ],
@@ -201,7 +201,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _isActionRunning ? null : () => _cancelRequest(outgoing?.id),
-                  child: const Text('Annuler la demande'),
+                  child: const Text('Cancel request'),
                 ),
               ),
             ],
@@ -210,7 +210,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
           ElevatedButton.icon(
             onPressed: _isActionRunning ? null : _sendFriendRequest,
             icon: const Icon(Icons.person_add_alt_1),
-            label: const Text('Ajouter en ami'),
+            label: const Text('Add friend'),
           ),
       ],
     );
@@ -265,15 +265,15 @@ class _UserDetailPageState extends State<UserDetailPage> {
     final incoming = relation?.incomingRequest;
     final outgoing = relation?.outgoingRequest;
     if (isFriend) {
-      _showSnackBar('Vous êtes déjà amis.');
+      _showSnackBar('You are already friends.');
       return;
     }
     if (outgoing?.isPending == true) {
-      _showSnackBar('Demande déjà envoyée.');
+      _showSnackBar('Request already sent.');
       return;
     }
     if (incoming?.isPending == true) {
-      _showSnackBar('Cette personne vous a déjà envoyé une demande.');
+      _showSnackBar('This person has already sent you a request.');
       return;
     }
 
@@ -283,7 +283,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
       if (!mounted) return;
       if (response['ok'] == true) {
         await _loadProfile();
-        _showSnackBar('Demande envoyée.');
+        _showSnackBar('Request sent.');
       } else {
         _showSnackBar(_apiService.readErrorMessage(response));
       }
@@ -305,7 +305,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
       if (!mounted) return;
       if (response['ok'] == true) {
         await _loadProfile();
-        _showSnackBar(accept ? 'Demande acceptée.' : 'Demande déclinée.');
+        _showSnackBar(accept ? 'Request accepted.' : 'Request declined.');
       } else {
         _showSnackBar(_apiService.readErrorMessage(response));
       }
@@ -324,7 +324,7 @@ class _UserDetailPageState extends State<UserDetailPage> {
       if (!mounted) return;
       if (response['ok'] == true) {
         await _loadProfile();
-        _showSnackBar('Demande annulée.');
+        _showSnackBar('Request canceled.');
       } else {
         _showSnackBar(_apiService.readErrorMessage(response));
       }
@@ -388,7 +388,7 @@ class _ErrorView extends StatelessWidget {
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: onRetry,
-            child: const Text('Réessayer'),
+            child: const Text('Retry'),
           ),
         ],
       ),

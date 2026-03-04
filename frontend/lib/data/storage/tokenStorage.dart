@@ -1,7 +1,7 @@
 // ignore_for_file: file_names
 import 'dart:convert';
 
-import 'package:whatsapp/data/storage/stockageSecurise.dart';
+import 'package:whatsapp/data/storage/secureStorage.dart';
 
 class TokenStorage {
   TokenStorage(this._storage);

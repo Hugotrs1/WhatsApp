@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 String buildDisplayName({
   String? firstName,
   String? lastName,
-  String fallback = 'Utilisateur',
+  String fallback = 'User',
 }) {
   final first = firstName?.trim() ?? '';
   final last = lastName?.trim() ?? '';
@@ -51,11 +51,11 @@ String formatLastSeen(DateTime value, {DateTime? now}) {
   if (isSameDay) {
     final hh = value.hour.toString().padLeft(2, '0');
     final mm = value.minute.toString().padLeft(2, '0');
-    return 'Vu a $hh:$mm';
+    return 'Seen at $hh:$mm';
   }
   final dd = value.day.toString().padLeft(2, '0');
   final mm = value.month.toString().padLeft(2, '0');
-  return 'Vu le $dd/$mm';
+  return 'Seen on $dd/$mm';
 }
 
 int? decodeJwtUserId(String? token) {
@@ -93,7 +93,7 @@ List<T> parseList<T>(
   return items;
 }
 
-String formatTemps(DateTime time) {
+String formatTime(DateTime time) {
   final now = DateTime.now();
   final isSameDay = now.year == time.year && now.month == time.month && now.day == time.day;
   if (isSameDay) {

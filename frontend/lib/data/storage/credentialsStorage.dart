@@ -1,7 +1,7 @@
 // ignore_for_file: file_names
-import 'package:whatsapp/data/storage/stockageSecurise.dart';
+import 'package:whatsapp/data/storage/secureStorage.dart';
 
-import '../../domain/auth/authModele.dart';
+import '../../domain/auth/authModel.dart';
 
 class CredentialsStorage {
   CredentialsStorage(this._storage);
