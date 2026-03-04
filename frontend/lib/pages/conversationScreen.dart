@@ -159,7 +159,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 child: Center(
                   child: TextButton(
                     onPressed: () => _loadMessages(reset: true),
-                    child: const Text('Reessayer'),
+                    child: const Text('Réessayer'),
                   ),
                 ),
               ),
@@ -211,7 +211,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final text = _controller.text.trim();
     if (_isSending) return;
     if (text.isEmpty) {
-      _showMessageError("Merci d'ecrire un message.");
+      _showMessageError("Merci d'écrire un message.");
       return;
     }
     _controller.clear();

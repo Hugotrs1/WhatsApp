@@ -21,7 +21,7 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   static const String _genericErrorMessage =
-      'Une erreur est survenue. Veuillez reessayer.';
+      'Une erreur est survenue. Veuillez réessayer.';
   static const Duration _searchDebounceDelay = Duration(milliseconds: 320);
 
   late final ApiService _apiService;
@@ -116,7 +116,7 @@ class _ChatsPageState extends State<ChatsPage> {
             child: Center(
               child: TextButton(
                 onPressed: _loadConversations,
-                child: const Text('Reessayer'),
+                child: const Text('Réessayer'),
               ),
             ),
           ),

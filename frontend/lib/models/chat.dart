@@ -15,11 +15,7 @@ class ChatMessage {
   final DateTime time;
   final bool isMine;
 
-  static ChatMessage? fromApi(
-    Map<String, dynamic> map, {
-    required String chatTitle,
-    int? currentUserId,
-  }) {
+  static ChatMessage? fromApi(Map<String, dynamic> map, {required String chatTitle,int? currentUserId}) {
     final content = map['content']?.toString() ?? '';
     if (content.trim().isEmpty) return null;
     final senderId = parseInt(map['sender_id']);
@@ -71,10 +67,7 @@ class Chat {
     );
   }
 
-  factory Chat.fromDirectConversation(
-    Map<String, dynamic> data, {
-    String? fallbackId,
-  }) {
+  factory Chat.fromDirectConversation(Map<String, dynamic> data, {String? fallbackId}) {
     final id = data['user_id']?.toString() ?? fallbackId ?? '';
     final title = buildDisplayName(
       firstName: data['first_name']?.toString(),
